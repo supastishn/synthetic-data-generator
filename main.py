@@ -1,6 +1,7 @@
 from litellm import completion
 import os
 import xml.etree.ElementTree as ET  # Add this for XML parsing
+import re  # Add for XML fragment extraction
 
 # Check for necesarry lenvironment variable
 
@@ -76,16 +77,25 @@ def generate_prompt(topic, amount):
     
     # Extract and parse XML content
     xml_resp = response.choices[0].message.content
+
+    # Extract XML-like prompt tags ignoring surrounding text
+    prompt_parts = re.findall(r'(<prompt>.*?</prompt>)', xml_resp, re.DOTALL)
+    if not prompt_parts:
+        print(f"No valid <prompt> tags found for topic '{topic}'")
+        print(f"Received response: {xml_resp}")
+        exit(1)
+
+    # Build clean XML structure by wrapping elements
+    xml_clean = f"<root>{''.join(prompt_parts)}</root>"
+
     try:
-        # Wrap to ensure single root element for proper parsing
-        wrapped_xml = f"<root>{xml_resp}</root>"
-        root = ET.fromstring(wrapped_xml)
+        root = ET.fromstring(xml_clean)
         for elem in root.findall('prompt'):
-            if elem.text and elem.text.strip():  # Check for non-empty prompts
+            if elem.text and elem.text.strip():
                 prompts.append(elem.text.strip())
     except ET.ParseError as e:
         print(f"XML Parsing failed for topic '{topic}': {e}")
-        print(f"Received response: {xml_resp}")
+        print(f"Cleaned XML block: {xml_clean}")
         exit(1)
 
 
