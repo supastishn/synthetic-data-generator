@@ -127,13 +127,15 @@ def generate_answers(messages, logits=False):
 
 conversations = []
 
-for idx, t in enumerate(topics):
-    amt = amounts[idx]
-    user_prompts = generate_prompts(t, amt)
-    for prompt in user_prompts:
+# Update loop variables and inner variable names
+for topic_index, current_topic in enumerate(topics):
+    amount_for_topic = amounts[topic_index]
+    user_prompts = generate_prompts(current_topic, amount_for_topic)
+    for user_prompt in user_prompts:
         conversations.append({
-            "messages": [prompt]
+            "messages": [user_prompt]
         })
 
-for conv in conversations:
-    conv['messages'] = generate_answers(conv['messages'], logits=logits)
+# Rename the conversation variable in the loop
+for conversation in conversations:
+    conversation['messages'] = generate_answers(conversation['messages'], logits=logits)
