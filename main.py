@@ -52,13 +52,23 @@ prompts = []
 
 def generate_prompt(topic, amount):
     print(f"Generating {amount} prompts for topic: {topic}")
-    # Request prompts wrapped in XML tags
-    user_message = f"Generate exactly {amount} prompts for '{topic}', each wrapped in <prompt> tags."
+    # Enhanced XML instructions
+    user_message = f"""
+    Generate exactly {amount} prompts for '{topic}'.
+    Format requirements:
+    1. Each prompt must be wrapped in <prompt> tags
+    2. Output ONLY the XML-formatted prompts with no additional text
+    3. Example format: <prompt>Your prompt here</prompt>
+    4. For multiple prompts, output them consecutively without separators
+    """
     
     response = completion(
         model=promptgen_model,
         messages=[
-            {"content": "You are an expert prompt maker.", "role": "system"},
+            {  # More strict system message
+                "content": "You output only in XML format. Wrap all prompts in <prompt> tags. Do not include any explanations or additional text.",
+                "role": "system"
+            },
             {"content": user_message, "role": "user"}
         ],
         temperature=temp,
@@ -67,13 +77,15 @@ def generate_prompt(topic, amount):
     # Extract and parse XML content
     xml_resp = response.choices[0].message.content
     try:
-        # Parse XML and extract all <prompt> elements
-        root = ET.fromstring(f"<root>{xml_resp}</root>")  # Wrap for single root element
+        # Wrap to ensure single root element for proper parsing
+        wrapped_xml = f"<root>{xml_resp}</root>"
+        root = ET.fromstring(wrapped_xml)
         for elem in root.findall('prompt'):
-            if elem.text:  # Only store non-empty prompts
+            if elem.text and elem.text.strip():  # Check for non-empty prompts
                 prompts.append(elem.text.strip())
-    except ET.ParseError:
-        print(f"Failed to parse XML response for topic: {topic}")
+    except ET.ParseError as e:
+        print(f"XML Parsing failed for topic '{topic}': {e}")
+        print(f"Received response: {xml_resp}")
         exit(1)
 
 
