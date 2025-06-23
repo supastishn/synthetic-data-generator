@@ -124,6 +124,9 @@ def generate_answers(messages, logits=False):
     assistant_response = response.choices[0].message.content.strip()
     messages.append({"role": "assistant", "content": assistant_response})
     return messages
+
+conversations = []
+
 for idx, t in enumerate(topics):
     amt = amounts[idx]
     user_prompts = generate_prompts(t, amt)
