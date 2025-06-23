@@ -1,5 +1,6 @@
 from litellm import completion
 import os
+import xml.etree.ElementTree as ET  # Add this for XML parsing
 
 # Check for necesarry lenvironment variable
 
@@ -51,13 +52,28 @@ prompts = []
 
 def generate_prompt(topic, amount):
     print(f"Generating {amount} prompts for topic: {topic}")
+    # Request prompts wrapped in XML tags
+    user_message = f"Generate exactly {amount} prompts for '{topic}', each wrapped in <prompt> tags."
+    
     response = completion(
-    model=promptgen_model,
-     messages=[
-            { "content": "You are an expert prompt maker.", "role": "system" }
-            { "content": f"Generate {amount} prompts for this topic: {topic}","role": "user"}
+        model=promptgen_model,
+        messages=[
+            {"content": "You are an expert prompt maker.", "role": "system"},
+            {"content": user_message, "role": "user"}
         ],
-    temperature=temp,
+        temperature=temp,
     )
+    
+    # Extract and parse XML content
+    xml_resp = response.choices[0].message.content
+    try:
+        # Parse XML and extract all <prompt> elements
+        root = ET.fromstring(f"<root>{xml_resp}</root>")  # Wrap for single root element
+        for elem in root.findall('prompt'):
+            if elem.text:  # Only store non-empty prompts
+                prompts.append(elem.text.strip())
+    except ET.ParseError:
+        print(f"Failed to parse XML response for topic: {topic}")
+        exit(1)
 
 
