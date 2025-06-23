@@ -15,11 +15,11 @@ if "ANSWERGEN_MODEL" not in os.environ:
 
 if "TEMPERATURE" not in os.environ:
     print("Warning: The environment variable TEMPERATURE is not set. Using default value of 0.7.")
-    temp = 0.7
+
 
 promptgen_model = os.environ["PROMPTGEN_MODEL"]
 answergen_model = os.environ["ANSWERGEN_MODEL"]
-
+temp = float(os.environ.get("TEMPERATURE", 0.7))
 
 topic = input("Please enter 1 or more topics, separated by a comma: ")
 
@@ -35,32 +35,43 @@ if len(amounts) != 1 and len(amounts) != len(topics):
 
 multiprompt_input = ""
 
-while multiprompt_input not in ["y", "yes", "n", "no", ""]:
+while multiprompt_input not in ["y", "n", ""]:
     multiprompt_input = input("Do you want to use multiprompt generation? This saves requests by generating 10 prompts per request. (Y/n): ").strip().lower()
-    if multiprompt_input not in ["y", "yes", "n", "no", ""]:
+    if multiprompt_input not in ["y", "n", ""]:
         print("Invalid input. Please enter 'y' or 'n'.")
 
-multiprompt = False
+multiprompt = True
 
-if multiprompt_input == "y":
+if multiprompt_input == "n":
     multiprompt = True
 
+logits_input = ""
+
+while logits_input not in ["y", "n",]:
+    logits_input = input("Do you want to use logits for answer generation? Logits are commonly used for distillation as opposed to regular QLora. (y/N): ").strip().lower()
+    if logits_input not in ["y", "n", ""]:
+        print("Invalid input. Please enter 'y' or 'n'.")
+
+logits = False
+
+if logits_input == "y":
+    logits = True
 
 if len(amounts) == 1:
     amounts = [amounts[0]] * len(topics)
 
 prompts = []
 
-def generate_prompt(topic, amount):
-    print(f"Generating {amount} prompts for topic: {topic}")
-    # Enhanced XML instructions
+def generate_prompts(topic = "Any", amount = 1):
+    print(f"Generating {amount} prompts for topic: {topic} ")
+
     user_message = f"""
     Generate exactly {amount} prompts for '{topic}'.
     Format requirements:
     1. Each prompt must be wrapped in <prompt> tags
     2. Output ONLY the XML-formatted prompts with no additional text
     3. Example format: <prompt>Your prompt here</prompt>
-    4. For multiple prompts, output them consecutively without separators
+    4. For multiple prompts, output them consecutively without separators   
     """
     
     response = completion(
@@ -99,3 +110,24 @@ def generate_prompt(topic, amount):
         exit(1)
 
 
+
+def generate_answers(messages, logits = false):
+
+    user_message = f"""
+    Generate an answer for the following prompt:
+    {prompt}
+    Format requirements:
+    1. Output only the answer text without any additional formatting or tags
+    2. Do not include any explanations or additional text
+    """
+    
+    response = completion(
+        model=answergen_model,
+        messages=[
+            {"content": user_message, "role": "user"}
+        ],
+        temperature=temp,
+        logits=logits
+    )
+    
+    return response.choices[0].message.content.strip()
