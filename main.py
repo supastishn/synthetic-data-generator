@@ -60,8 +60,6 @@ if logits_input == "y":
 if len(amounts) == 1:
     amounts = [amounts[0]] * len(topics)
 
-prompts = []
-
 def generate_prompts(topic = "Any", amount = 1):
     print(f"Generating {amount} prompts for topic: {topic} ")
 
@@ -99,11 +97,16 @@ def generate_prompts(topic = "Any", amount = 1):
     # Build clean XML structure by wrapping elements
     xml_clean = f"<root>{''.join(prompt_parts)}</root>"
 
+    result = []
     try:
         root = ET.fromstring(xml_clean)
         for elem in root.findall('prompt'):
             if elem.text and elem.text.strip():
-                prompts.append(elem.text.strip())
+                result.append({
+                    "role": "user",
+                    "content": elem.text.strip()
+                })
+        return result
     except ET.ParseError as e:
         print(f"XML Parsing failed for topic '{topic}': {e}")
         print(f"Cleaned XML block: {xml_clean}")
@@ -111,23 +114,23 @@ def generate_prompts(topic = "Any", amount = 1):
 
 
 
-def generate_answers(messages, logits = false):
-
-    user_message = f"""
-    Generate an answer for the following prompt:
-    {prompt}
-    Format requirements:
-    1. Output only the answer text without any additional formatting or tags
-    2. Do not include any explanations or additional text
-    """
-    
+def generate_answers(messages, logits=False):
     response = completion(
         model=answergen_model,
-        messages=[
-            {"content": user_message, "role": "user"}
-        ],
+        messages=messages,
         temperature=temp,
         logits=logits
     )
-    
-    return response.choices[0].message.content.strip()
+    assistant_response = response.choices[0].message.content.strip()
+    messages.append({"role": "assistant", "content": assistant_response})
+    return messages
+for idx, t in enumerate(topics):
+    amt = amounts[idx]
+    user_prompts = generate_prompts(t, amt)
+    for prompt in user_prompts:
+        conversations.append({
+            "messages": [prompt]
+        })
+
+for conv in conversations:
+    conv['messages'] = generate_answers(conv['messages'], logits=logits)
