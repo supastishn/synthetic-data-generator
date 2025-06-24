@@ -6,6 +6,8 @@ import json
 import transformers
 from datasets import load_dataset, Dataset
 from unsloth import FastLanguageModel
+from trl import SFTTrainer
+from transformers import TrainingArguments
 
 model_name = "meta-llama/Llama-2-7b-hf"
 
@@ -43,16 +45,10 @@ def convert_conversation_to_pair(messages):
 
 # Generate prompts for the dataset  
 def generate_prompt(data_point):
-  return f"""
+    return {"text": f"""
 <Human>: {data_point['human']}
 <AI>: {data_point['assistant']}
-  """.strip()
-
-
-def generate_and_tokenize_prompt(data_point):
-  full_prompt = generate_prompt(data_point)
-  tokenized_full_prompt = tokenizer(full_prompt, padding=True, truncation=True)
-  return tokenized_full_prompt
+""".strip()}
 
 # Load local conversations.json file
 with open('conversations.json', 'r') as f:
@@ -66,7 +62,4 @@ for conversation in conversations_data:
         data_pairs.append({"human": human_msg, "assistant": assistant_msg})
 
 # Create dataset from the pairs
-dataset = Dataset.from_list(data_pairs)
-
-# Tokenize dataset
-dataset = dataset.shuffle().map(generate_and_tokenize_prompt)
+dataset = Dataset.from_list(data_pairs).map(generate_prompt)
