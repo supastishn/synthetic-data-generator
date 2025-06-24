@@ -3,6 +3,7 @@ import os
 from dotenv import load_dotenv
 import xml.etree.ElementTree as ET  # Add this for XML parsing
 import re  # Add for XML fragment extraction
+import json  # Add for JSON serialization
 
 # Load environment variables from .env file
 load_dotenv()
@@ -22,6 +23,9 @@ if not os.getenv("TEMPERATURE"):
 promptgen_model = os.getenv("PROMPTGEN_MODEL")
 answergen_model = os.getenv("ANSWERGEN_MODEL")
 temp = float(os.getenv("TEMPERATURE", "0.7"))
+
+# Add after other env variable assignments
+output_file = os.getenv("OUTPUT_FILE", "conversations.json")
 
 # Replace topic input with env var support
 topic = os.getenv("TOPICS", "").strip() or input("Please enter 1 or more topics, separated by a comma: ").strip()
@@ -141,3 +145,8 @@ for topic_index, current_topic in enumerate(topics):
 # Rename the conversation variable in the loop
 for conversation in conversations:
     conversation['messages'] = generate_answers(conversation['messages'], logits=logits)
+
+# Add at the very end of the script, after processing conversations
+print(f"\nSaving {len(conversations)} conversations to {output_file}")
+with open(output_file, 'w', encoding='utf-8') as f:
+    json.dump(conversations, f, ensure_ascii=False, indent=2)
