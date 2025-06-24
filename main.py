@@ -133,14 +133,31 @@ def generate_prompts(topic = "Any", amount = 1):
 
 
 def generate_answers(messages, logits=False):
+    # Add this response options parameter
+    response_options = {}
+    if logits:
+        response_options["logprobs"] = True
+        response_options["top_logprobs"] = 10  # Number of options to capture
+
     response = completion(
         model=answergen_model,
         messages=messages,
         temperature=temp,
-        logits=logits
+        **response_options  # Pass response options conditionally
     )
+
     assistant_response = response.choices[0].message.content.strip()
-    messages.append({"role": "assistant", "content": assistant_response})
+
+    # Add logit capture here
+    result_message = {
+        "role": "assistant", 
+        "content": assistant_response
+    }
+
+    if logits:
+        result_message["logprobs"] = response.choices[0].logprobs
+
+    messages.append(result_message)
     return messages
 
 conversations = []
@@ -156,7 +173,11 @@ for topic_index, current_topic in enumerate(topics):
 
 # Rename the conversation variable in the loop
 for conversation in conversations:
-    conversation['messages'] = generate_answers(conversation['messages'], logits=logits)
+    messages_list = conversation['messages']
+
+    # Generate response with conditional logit capture
+    updated_messages = generate_answers(messages_list, logits=logits)
+    conversation['messages'] = updated_messages
 
 # Add at the very end of the script, after processing conversations
 print(f"\nSaving {len(conversations)} conversations to {output_file}")
