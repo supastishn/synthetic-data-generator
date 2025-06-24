@@ -11,6 +11,8 @@ This tool generates structured conversations (prompts and answers) based on spec
 - Save conversations to JSON file
 - Environment variables for configuration
 - Interactive prompts for missing values
+- Batch processing for prompt/answer generation
+- Asynchronous API calls for improved performance
 
 ## Setup
 1. Install dependencies:
@@ -58,6 +60,8 @@ When `LOGITS=y`:
 | `MODEL_SPLIT` | Percentage split for answer models (comma-separated, sum=100) | Required for multiple models |
 | `LOGITS` | Use logits for answer generation? (y/n) | n |
 | `OUTPUT_FILE` | Output JSON filename | conversations.json |
+| `BATCH_SIZE` | Batch size for prompt generation | 5 |
+| `ASYNC_GEN` | Enable asynchronous generation? (y/n) | n |
 
 ## Usage
 Run the script:
@@ -106,6 +110,8 @@ Conversations are saved in JSON format:
   }
 ]
 ```
+- The conversation object now includes a top-level "model" field indicating the answer generation model
+- User messages include "generation_model" showing which model created the prompt
 
 ## Example
 ```bash
@@ -114,6 +120,8 @@ PROMPTGEN_MODEL=gpt-3.5-turbo
 ANSWERGEN_MODEL=gpt-4
 TOPICS=Python,JavaScript
 AMOUNTS=2
+BATCH_SIZE=5          # Add this line
+ASYNC_GEN=n           # Add this line
 
 # Command:
 python main.py
