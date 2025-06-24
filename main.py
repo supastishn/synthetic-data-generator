@@ -8,57 +8,65 @@ import json  # Add for JSON serialization
 # Load environment variables from .env file
 load_dotenv()
 
-# Check for necessary environment variables using os.getenv
-if not os.getenv("PROMPTGEN_MODEL"):
-    print("Error: The environment variable PROMOTGEN_MODEL is not set.")
+def get_env_or_prompt(env_var, prompt, default=None):
+    value = os.getenv(env_var)
+    if value is not None:
+        return value.strip()
+    user_input = input(prompt).strip()
+    if user_input == "" and default is not None:
+        return default
+    return user_input
+
+# Replace model handling
+promptgen_model = get_env_or_prompt("PROMPTGEN_MODEL", "Please enter the model name for generating prompts: ")
+if not promptgen_model:
+    print("Error: PROMPTGEN_MODEL is required.")
     exit(1)
 
-if not os.getenv("ANSWERGEN_MODEL"):
-    print("Error: The environment variable ANSWERGEN_MODEL is not set.")
+answergen_model = get_env_or_prompt("ANSWERGEN_MODEL", "Please enter the model name for generating answers: ")
+if not answergen_model:
+    print("Error: ANSWERGEN_MODEL is required.")
     exit(1)
 
-if not os.getenv("TEMPERATURE"):
-    print("Warning: The environment variable TEMPERATURE is not set. Using default value of 0.7.")
-
-promptgen_model = os.getenv("PROMPTGEN_MODEL")
-answergen_model = os.getenv("ANSWERGEN_MODEL")
-temp = float(os.getenv("TEMPERATURE", "0.7"))
+# Replace TEMPERATURE handling
+temp_str = get_env_or_prompt("TEMPERATURE", "Enter the temperature for generation (default 0.7): ", "0.7")
+try:
+    temp = float(temp_str)
+except ValueError:
+    print("Invalid format for temperature. Using default 0.7")
+    temp = 0.7
 
 # Add after other env variable assignments
 output_file = os.getenv("OUTPUT_FILE", "conversations.json")
 
-# Replace topic input with env var support
-topic = os.getenv("TOPICS", "").strip() or input("Please enter 1 or more topics, separated by a comma: ").strip()
-topics = [topic.strip() for topic in topic.split(",")]
-
-# Replace amount input with env var support
-amount = os.getenv("AMOUNTS", "").strip() or input("How many prompt/answer combination do you want to create? Please enter either one number, or the same amount of numbers as topics, sepatated by a comma: ").strip()
-amounts = [int(a.strip()) for a in amount.split(",")]
-
-if len(amounts) != 1 and len(amounts) != len(topics):
-    print("Error: The amount of numbers must either be 1 or the same amount as topics.")
+# Replace TOPICS handling
+topic = get_env_or_prompt("TOPICS", "Please enter 1 or more topics, separated by a comma: ")
+topics = [t.strip() for t in topic.split(",")]
+if not topics or any(t == "" for t in topics):
+    print("Error: At least one non-empty topic is required.")
     exit(1)
 
-# Replace multiprompt input with env var support
-multiprompt_input = (os.getenv("MULTI_PROMPT") or "").lower()
-if not multiprompt_input:
-    while multiprompt_input not in ["y", "n", ""]:
-        multiprompt_input = input("Do you want to use multiprompt generation? This saves requests by generating 10 prompts per request. (Y/n): ").strip().lower()
-        if multiprompt_input not in ["y", "n", ""]:
-            print("Invalid input. Please enter 'y' or 'n'.")
+# Replace AMOUNTS handling
+amount = get_env_or_prompt("AMOUNTS", "How many prompt/answer combinations? Enter one number or comma-separated numbers: ")
+try:
+    amounts = [int(a.strip()) for a in amount.split(",")]
+except ValueError:
+    print("Error: All amounts must be integers.")
+    exit(1)
+if len(amounts) != 1 and len(amounts) != len(topics):
+    print("Error: Amount must be single number or same count as topics.")
+    exit(1)
 
+# Replace MULTI_PROMPT handling
+multiprompt_input = get_env_or_prompt("MULTI_PROMPT", 
+    "Use multiprompt generation? (Y/n): ", "y").lower()
 multiprompt = True
 if multiprompt_input == "n":
-    multiprompt = False  # Fix inverted logic
+    multiprompt = False
 
-# Replace logits input with env var support
-logits_input = (os.getenv("LOGITS") or "").lower()
-if not logits_input:
-    while logits_input not in ["y", "n"]:
-        logits_input = input("Do you want to use logits for answer generation? Logits are commonly used for distillation as opposed to regular QLora. (y/N): ").strip().lower()
-        if logits_input not in ["y", "n", ""]:
-            print("Invalid input. Please enter 'y' or 'n'.")
-
+# Replace LOGITS handling
+logits_input = get_env_or_prompt("LOGITS", 
+    "Use logits for answer generation? (y/N): ", "n").lower()
 logits = False
 if logits_input == "y":
     logits = True
