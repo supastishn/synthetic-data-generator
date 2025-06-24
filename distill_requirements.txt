@@ -5,3 +5,4 @@ bitsandbytes
 accelerate
 tensorboard
 evaluate
+peft

@@ -20,10 +20,15 @@ model, tokenizer = FastLanguageModel.from_pretrained(
 
 tokenizer.pad_token = tokenizer.eos_token
 
+# Add before model.get_peft_model
+target_modules_str = os.getenv("TARGET_MODULES", "q_proj,v_proj")
+target_modules = [m.strip() for m in target_modules_str.split(",")]
+print(f"Using LoRA target modules: {target_modules}")
+
 model = FastLanguageModel.get_peft_model(
     model,
     r=16,
-    target_modules=["q_proj","v_proj"],
+    target_modules=target_modules,  # Updated
     lora_alpha=32,
     lora_dropout=0.05,
     bias="none",

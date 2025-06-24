@@ -8,6 +8,7 @@ from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, TrainingArguments, Trainer
 from transformers import DataCollatorWithPadding
 import torch.nn.functional as F
+from peft import LoraConfig, get_peft_model  # Add this import
 
 class DistillationDataset(Dataset):
     def __init__(self, file_path, tokenizer, max_length=2048):
@@ -203,6 +204,22 @@ model = AutoModelForCausalLM.from_pretrained(
     quantization_config=bnb_config,
     device_map="auto"
 )
+
+# Add target modules configuration
+target_modules_str = os.getenv("TARGET_MODULES", "q_proj,v_proj")
+target_modules = [m.strip() for m in target_modules_str.split(",")]
+print(f"Using LoRA target modules: {target_modules}")
+
+peft_config = LoraConfig(
+    r=16,
+    lora_alpha=32,
+    target_modules=target_modules,
+    lora_dropout=0.05,
+    bias="none",
+    task_type="CAUSAL_LM"
+)
+model = get_peft_model(model, peft_config)
+model.print_trainable_parameters()
 
 # Dataset and dataloader
 dataset = DistillationDataset(data_file, tokenizer)
