@@ -1,40 +1,34 @@
 from litellm import completion
 import os
+from dotenv import load_dotenv
 import xml.etree.ElementTree as ET  # Add this for XML parsing
 import re  # Add for XML fragment extraction
 
-# Check for necesarry lenvironment variable
+# Load environment variables from .env file
+load_dotenv()
 
-if "PROMPTGEN_MODEL" not in os.environ:
+# Check for necessary environment variables using os.getenv
+if not os.getenv("PROMPTGEN_MODEL"):
     print("Error: The environment variable PROMOTGEN_MODEL is not set.")
     exit(1)
 
-if "ANSWERGEN_MODEL" not in os.environ:
+if not os.getenv("ANSWERGEN_MODEL"):
     print("Error: The environment variable ANSWERGEN_MODEL is not set.")
     exit(1)
 
-if "TEMPERATURE" not in os.environ:
+if not os.getenv("TEMPERATURE"):
     print("Warning: The environment variable TEMPERATURE is not set. Using default value of 0.7.")
 
-
-promptgen_model = os.environ["PROMPTGEN_MODEL"]
-answergen_model = os.environ["ANSWERGEN_MODEL"]
-temp = float(os.environ.get("TEMPERATURE", 0.7))
+promptgen_model = os.getenv("PROMPTGEN_MODEL")
+answergen_model = os.getenv("ANSWERGEN_MODEL")
+temp = float(os.getenv("TEMPERATURE", "0.7"))
 
 # Replace topic input with env var support
-if "TOPICS" in os.environ and os.environ["TOPICS"].strip():
-    topic = os.environ["TOPICS"].strip()
-else:
-    topic = input("Please enter 1 or more topics, separated by a comma: ").strip()
-
+topic = os.getenv("TOPICS", "").strip() or input("Please enter 1 or more topics, separated by a comma: ").strip()
 topics = [topic.strip() for topic in topic.split(",")]
 
 # Replace amount input with env var support
-if "AMOUNTS" in os.environ and os.environ["AMOUNTS"].strip():
-    amount = os.environ["AMOUNTS"].strip()
-else:
-    amount = input("How many prompt/answer combination do you want to create? Please enter either one number, or the same amount of numbers as topics, sepatated by a comma: ").strip()
-
+amount = os.getenv("AMOUNTS", "").strip() or input("How many prompt/answer combination do you want to create? Please enter either one number, or the same amount of numbers as topics, sepatated by a comma: ").strip()
 amounts = [int(a.strip()) for a in amount.split(",")]
 
 if len(amounts) != 1 and len(amounts) != len(topics):
@@ -42,32 +36,26 @@ if len(amounts) != 1 and len(amounts) != len(topics):
     exit(1)
 
 # Replace multiprompt input with env var support
-if "MULTI_PROMPT" in os.environ and os.environ["MULTI_PROMPT"].strip():
-    multiprompt_input = os.environ["MULTI_PROMPT"].strip().lower()
-else:
-    multiprompt_input = ""
+multiprompt_input = (os.getenv("MULTI_PROMPT") or "").lower()
+if not multiprompt_input:
     while multiprompt_input not in ["y", "n", ""]:
         multiprompt_input = input("Do you want to use multiprompt generation? This saves requests by generating 10 prompts per request. (Y/n): ").strip().lower()
         if multiprompt_input not in ["y", "n", ""]:
             print("Invalid input. Please enter 'y' or 'n'.")
 
 multiprompt = True
-
 if multiprompt_input == "n":
-    multiprompt = True
+    multiprompt = False  # Fix inverted logic
 
 # Replace logits input with env var support
-if "LOGITS" in os.environ and os.environ["LOGITS"].strip():
-    logits_input = os.environ["LOGITS"].strip().lower()
-else:
-    logits_input = ""
+logits_input = (os.getenv("LOGITS") or "").lower()
+if not logits_input:
     while logits_input not in ["y", "n"]:
         logits_input = input("Do you want to use logits for answer generation? Logits are commonly used for distillation as opposed to regular QLora. (y/N): ").strip().lower()
         if logits_input not in ["y", "n", ""]:
             print("Invalid input. Please enter 'y' or 'n'.")
 
 logits = False
-
 if logits_input == "y":
     logits = True
 
