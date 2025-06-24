@@ -4,6 +4,8 @@ from dotenv import load_dotenv
 import xml.etree.ElementTree as ET  # Add this for XML parsing
 import re  # Add for XML fragment extraction
 import json  # Add for JSON serialization
+import asyncio
+import concurrent.futures
 
 # Add after other imports
 class EnhancedJSONEncoder(json.JSONEncoder):
@@ -110,6 +112,25 @@ logits = False
 if logits_input == "y":
     logits = True
 
+# Batch size for prompt/answer generation
+batch_size = get_env_or_prompt(
+    "BATCH_SIZE",
+    "Enter batch size for prompt generation (default 5): ",
+    "5"
+)
+try:
+    batch_size = int(batch_size)
+except ValueError:
+    print("Invalid batch size. Using default 5")
+    batch_size = 5
+
+# Async generation flag
+async_gen = get_env_or_prompt(
+    "ASYNC_GEN",
+    "Enable simultaneous generation? (y/N): ",
+    "n"
+).lower() == "y"
+
 if len(amounts) == 1:
     amounts = [amounts[0]] * len(topics)
 
@@ -194,19 +215,69 @@ def generate_answers(messages, model_to_use, logits=False):
     messages.append(result_message)
     return messages
 
+# --- Async support functions ---
+
+async def generate_prompts_async(topic, amount, batch_size):
+    pool = concurrent.futures.ThreadPoolExecutor()
+    batches = (amount + batch_size - 1) // batch_size
+    tasks = []
+    remaining = amount
+
+    for _ in range(batches):
+        task_amount = min(batch_size, remaining)
+        remaining -= task_amount
+        tasks.append(
+            asyncio.get_event_loop().run_in_executor(
+                pool, generate_prompts, topic, task_amount
+            )
+        )
+
+    return await asyncio.gather(*tasks)
+
+async def generate_answers_async(messages_list, models_list, logits):
+    pool = concurrent.futures.ThreadPoolExecutor()
+    tasks = []
+
+    for msg, model in zip(messages_list, models_list):
+        tasks.append(
+            asyncio.get_event_loop().run_in_executor(
+                pool, generate_answers, msg, model, logits
+            )
+        )
+
+    return await asyncio.gather(*tasks)
+
 conversations = []
 
-# Update loop variables and inner variable names
-for topic_index, current_topic in enumerate(topics):
-    amount_for_topic = amounts[topic_index]
-    user_prompts = generate_prompts(current_topic, amount_for_topic)
-    for user_prompt in user_prompts:
-        # Track which model generated the prompt (promptgen_model)
-        user_prompt = dict(user_prompt)
-        user_prompt["generation_model"] = promptgen_model
-        conversations.append({
-            "messages": [user_prompt]
-        })
+# Prompt generation (sync or async)
+if async_gen:
+    # Async prompt generation
+    async def gather_prompts():
+        tasks = []
+        for topic_idx, current_topic in enumerate(topics):
+            amount_for_topic = amounts[topic_idx]
+            tasks.append(
+                generate_prompts_async(current_topic, amount_for_topic, batch_size)
+            )
+        topic_results = await asyncio.gather(*tasks)
+        convs = []
+        for topic_batches in topic_results:
+            for batch in topic_batches:
+                for user_prompt in batch:
+                    user_prompt = dict(user_prompt)
+                    user_prompt["generation_model"] = promptgen_model
+                    convs.append({"messages": [user_prompt]})
+        return convs
+    conversations = asyncio.get_event_loop().run_until_complete(gather_prompts())
+else:
+    # Sync prompt generation (original code)
+    for topic_index, current_topic in enumerate(topics):
+        amount_for_topic = amounts[topic_index]
+        user_prompts = generate_prompts(current_topic, amount_for_topic)
+        for user_prompt in user_prompts:
+            user_prompt = dict(user_prompt)
+            user_prompt["generation_model"] = promptgen_model
+            conversations.append({"messages": [user_prompt]})
 
 # Assign answer models to conversations according to splits
 assigned_models = []
@@ -220,17 +291,26 @@ for i, (model, split) in enumerate(zip(models, splits)):
 import random
 random.shuffle(assigned_models)
 
-# Replace the answer generation loop
-for idx, conversation in enumerate(conversations):
-    model_to_use = assigned_models[idx]
-    updated_messages = generate_answers(
-        conversation['messages'],
-        model_to_use,
-        logits=logits
-    )
-    conversation['messages'] = updated_messages
-    # Store which model was used for answer generation
-    conversation['model'] = model_to_use
+# Answer generation (sync or async)
+if async_gen:
+    async def gather_answers():
+        messages_list = [conv["messages"] for conv in conversations]
+        updated_messages = await generate_answers_async(
+            messages_list, assigned_models, logits
+        )
+        for idx, (conv, updated) in enumerate(zip(conversations, updated_messages)):
+            conv["messages"] = updated
+            conv["model"] = assigned_models[idx]
+    asyncio.get_event_loop().run_until_complete(gather_answers())
+else:
+    for idx, conversation in enumerate(conversations):
+        model_to_use = assigned_models[idx]
+        conversation['messages'] = generate_answers(
+            conversation['messages'],
+            model_to_use,
+            logits
+        )
+        conversation['model'] = model_to_use
 
 # Add at the very end of the script, after processing conversations
 print(f"\nSaving {len(conversations)} conversations to {output_file}")
