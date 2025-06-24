@@ -159,7 +159,7 @@ class DistillationTrainer(Trainer):
             # Prepare label loss
             shift_labels = inputs['labels'][i, start_idx+1:end_idx+1]
             label_loss = F.cross_entropy(
-                student_resp_logits[1:].contiguous().view(-1, student_resp_logits.size(-1)),
+                student_resp_logits.contiguous().view(-1, student_resp_logits.size(-1)),
                 shift_labels.contiguous().view(-1),
                 ignore_index=self.tokenizer.pad_token_id
             )
