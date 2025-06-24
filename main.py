@@ -37,7 +37,11 @@ except ValueError:
     temp = 0.7
 
 # Add after other env variable assignments
-output_file = os.getenv("OUTPUT_FILE", "conversations.json")
+output_file = get_env_or_prompt(
+    "OUTPUT_FILE", 
+    "Enter filename to save conversations (default conversations.json): ", 
+    "conversations.json"
+)
 
 # Replace TOPICS handling
 topic = get_env_or_prompt("TOPICS", "Please enter 1 or more topics, separated by a comma: ")
