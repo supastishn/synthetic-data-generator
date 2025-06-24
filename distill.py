@@ -63,12 +63,21 @@ class DistillationDataset(Dataset):
             # Find response start position
             prompt_enc = self.tokenizer(f"[INST] {prompt} [/INST]", return_tensors='pt')
             response_start = len(prompt_enc.input_ids[0])
-
+            
+            # Calculate actual tokenized response length
+            actual_response_tokens = len(encoding.input_ids[0]) - response_start
+            num_response_tokens = min(len(logits_list), actual_response_tokens)
+            
+            # Truncate teacher logits to match actual tokenized length
+            truncated_logits = logits_list[:num_response_tokens]
+            if not truncated_logits:  # Skip if empty
+                continue
+                
             sample = {
                 'input_ids': encoding.input_ids[0],
                 'attention_mask': encoding.attention_mask[0],
                 'response_start': response_start,
-                'teacher_logits': torch.stack(logits_list),
+                'teacher_logits': torch.stack(truncated_logits),
                 'labels': encoding.input_ids[0].clone()
             }
             processed.append(sample)
@@ -130,8 +139,9 @@ class DistillationTrainer(Trainer):
                 
             # Extract response section
             start_idx = inputs['response_starts'][i] - 1  # -1 for prediction offset
+            teacher_logit_length = inputs['teacher_logits'][i].shape[0]
             end_idx = min(
-                start_idx + inputs['teacher_logits'][i].shape[0], 
+                start_idx + teacher_logit_length, 
                 student_logits.shape[1] - 1
             )
             
