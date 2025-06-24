@@ -1,9 +1,5 @@
-
-pandas
 torch
 transformers
-datasets
-unsloth
-trl
+tqdm
 bitsandbytes
 accelerate
