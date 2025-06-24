@@ -3,8 +3,9 @@ import bitsandbytes as bnb
 import pandas as pd
 import torch
 import torch.nn as nn
+import json
 import transformers
-from datasets import load_dataset
+from datasets import load_dataset, Dataset
 from peft import (
     LoraConfig,
     PeftConfig,
@@ -58,21 +59,43 @@ lora_config = LoraConfig(
 
 model = get_peft_model(model, lora_config)
 
+def convert_conversation_to_pair(messages):
+    """Convert conversation messages to human/assistant pair"""
+    human = ""
+    assistant = ""
+    for msg in messages:
+        if msg["role"] == "user":
+            human = msg["content"]
+        elif msg["role"] == "assistant":
+            assistant = msg["content"]
+    return human, assistant
 
 # Generate prompts for the dataset  
 def generate_prompt(data_point):
   return f"""
-<Human>: {data_point[0]}
-<AI>: {data_point[1]}
+<Human>: {data_point['human']}
+<AI>: {data_point['assistant']}
   """.strip()
+
 
 def generate_and_tokenize_prompt(data_point):
   full_prompt = generate_prompt(data_point)
   tokenized_full_prompt = tokenizer(full_prompt, padding=True, truncation=True)
   return tokenized_full_prompt
 
-from datasets import load_dataset
-dataset_name = 'Amod/mental_health_counseling_conversations'
-dataset = load_dataset(dataset_name, split="train")
+# Load local conversations.json file
+with open('conversations.json', 'r') as f:
+    conversations_data = json.load(f)
 
+# Create pairs from conversations
+data_pairs = []
+for conversation in conversations_data:
+    human_msg, assistant_msg = convert_conversation_to_pair(conversation["messages"])
+    if human_msg and assistant_msg:  # Only include valid pairs
+        data_pairs.append({"human": human_msg, "assistant": assistant_msg})
+
+# Create dataset from the pairs
+dataset = Dataset.from_list(data_pairs)
+
+# Tokenize dataset
 dataset = dataset.shuffle().map(generate_and_tokenize_prompt)
