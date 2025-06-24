@@ -32,9 +32,35 @@ if not promptgen_model:
     print("Error: PROMPTGEN_MODEL is required.")
     exit(1)
 
-answergen_model = get_env_or_prompt("ANSWERGEN_MODEL", "Please enter the model name for generating answers: ")
+answergen_model = get_env_or_prompt("ANSWERGEN_MODEL", "Please enter the model name(s) for generating answers (comma-separated for multiple): ")
 if not answergen_model:
     print("Error: ANSWERGEN_MODEL is required.")
+    exit(1)
+
+# Support multiple answer models
+models = [m.strip() for m in answergen_model.split(",") if m.strip()]
+if not models:
+    print("Error: At least one answer model is required.")
+    exit(1)
+
+# Define a default split for multiple models
+default_split = ",".join(["100"] * len(models))  # Single model case
+
+model_split_str = get_env_or_prompt(
+    "MODEL_SPLIT",
+    f"Enter model split percentages (comma-separated, sum=100) for {len(models)} models: ",
+    default=default_split
+)
+
+try:
+    # Parse and validate split percentages
+    splits = [int(s.strip()) for s in model_split_str.split(",")]
+    if len(splits) != len(models):
+        raise ValueError("Split count must match model count")
+    if sum(splits) != 100:
+        raise ValueError("Splits must sum to 100")
+except Exception as e:
+    print(f"Invalid MODEL_SPLIT: {e}")
     exit(1)
 
 # Replace TEMPERATURE handling
@@ -141,26 +167,25 @@ def generate_prompts(topic = "Any", amount = 1):
 
 
 
-def generate_answers(messages, logits=False):
-    # Add this response options parameter
+def generate_answers(messages, model_to_use, logits=False):
     response_options = {}
     if logits:
         response_options["logprobs"] = True
-        response_options["top_logprobs"] = 10  # Number of options to capture
+        response_options["top_logprobs"] = 10
 
     response = completion(
-        model=answergen_model,
+        model=model_to_use,
         messages=messages,
         temperature=temp,
-        **response_options  # Pass response options conditionally
+        **response_options
     )
 
     assistant_response = response.choices[0].message.content.strip()
 
-    # Add logit capture here
     result_message = {
-        "role": "assistant", 
-        "content": assistant_response
+        "role": "assistant",
+        "content": assistant_response,
+        "generation_model": model_to_use
     }
 
     if logits:
@@ -176,17 +201,36 @@ for topic_index, current_topic in enumerate(topics):
     amount_for_topic = amounts[topic_index]
     user_prompts = generate_prompts(current_topic, amount_for_topic)
     for user_prompt in user_prompts:
+        # Track which model generated the prompt (promptgen_model)
+        user_prompt = dict(user_prompt)
+        user_prompt["generation_model"] = promptgen_model
         conversations.append({
             "messages": [user_prompt]
         })
 
-# Rename the conversation variable in the loop
-for conversation in conversations:
-    messages_list = conversation['messages']
+# Assign answer models to conversations according to splits
+assigned_models = []
+for i, (model, split) in enumerate(zip(models, splits)):
+    count = (split * len(conversations)) // 100
+    if i == len(models) - 1:  # Last model gets remainder
+        count = len(conversations) - len(assigned_models)
+    assigned_models.extend([model] * count)
 
-    # Generate response with conditional logit capture
-    updated_messages = generate_answers(messages_list, logits=logits)
+# Shuffle model assignments for fair distribution
+import random
+random.shuffle(assigned_models)
+
+# Replace the answer generation loop
+for idx, conversation in enumerate(conversations):
+    model_to_use = assigned_models[idx]
+    updated_messages = generate_answers(
+        conversation['messages'],
+        model_to_use,
+        logits=logits
+    )
     conversation['messages'] = updated_messages
+    # Store which model was used for answer generation
+    conversation['model'] = model_to_use
 
 # Add at the very end of the script, after processing conversations
 print(f"\nSaving {len(conversations)} conversations to {output_file}")

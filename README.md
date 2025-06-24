@@ -17,13 +17,14 @@ pip install python-dotenv litellm
 2. Create a `.env` file (optional) with your environment variables:
 ```ini
 PROMPTGEN_MODEL=<your_prompt_generation_model>
-ANSWERGEN_MODEL=<your_answer_generation_model>
+ANSWERGEN_MODEL=<your_answer_generation_model>[,<other_models>]
 TEMPERATURE=0.7
 TOPICS=topic1,topic2
 AMOUNTS=3,2
 MULTI_PROMPT=y
 LOGITS=y    # Set to y to enable logits capture
 OUTPUT_FILE=my_conversations.json
+MODEL_SPLIT=50,25,25   # For multiple answer models, comma-separated percentages (sum=100)
 ```
 
 ## Logits Capture
@@ -40,6 +41,7 @@ When `LOGITS=y`:
 | `TOPICS` | Comma-separated list of topics | *Required* |
 | `AMOUNTS` | Number of prompts per topic (single or comma-separated) | *Required* |
 | `MULTI_PROMPT` | Use multi-prompt generation? (Y/n) | y |
+| `MODEL_SPLIT` | Percentage split for answer models (comma-separated, sum=100) | Required for multiple models |
 | `LOGITS` | Use logits for answer generation? (y/n) | n |
 | `OUTPUT_FILE` | Output JSON filename | conversations.json |
 
@@ -64,7 +66,8 @@ Conversations are saved in JSON format:
     "messages": [
       {
         "role": "user",
-        "content": "Explain quantum computing in simple terms"
+        "content": "Explain quantum computing in simple terms",
+        "generation_model": "gpt-3.5-turbo"  // New field for prompt model
       },
       {
         "role": "assistant",
@@ -81,9 +84,11 @@ Conversations are saved in JSON format:
               ]
             }
           ]
-        }
+        },
+        "generation_model": "gpt-4"  // New field for answer model
       }
-    ]
+    ],
+    "model": "gpt-4"  // Model used for answer generation in this conversation
   }
 ]
 ```
@@ -100,5 +105,8 @@ AMOUNTS=2
 python main.py
 
 # Outputs conversations to conversations.json
+Additional features:
+- Each message shows which model generated it
+- Supports multiple answer models with percentage splits (see MODEL_SPLIT)
 The output will contain token probability data when LOGITS=y
 ```
