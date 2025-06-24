@@ -5,6 +5,15 @@ import xml.etree.ElementTree as ET  # Add this for XML parsing
 import re  # Add for XML fragment extraction
 import json  # Add for JSON serialization
 
+# Add after other imports
+class EnhancedJSONEncoder(json.JSONEncoder):
+    def default(self, o):
+        if hasattr(o, 'to_dict'):
+            return o.to_dict()
+        elif hasattr(o, '__dict__'):
+            return o.__dict__
+        return super().default(o)
+
 # Load environment variables from .env file
 load_dotenv()
 
@@ -182,4 +191,4 @@ for conversation in conversations:
 # Add at the very end of the script, after processing conversations
 print(f"\nSaving {len(conversations)} conversations to {output_file}")
 with open(output_file, 'w', encoding='utf-8') as f:
-    json.dump(conversations, f, ensure_ascii=False, indent=2)
+    json.dump(conversations, f, ensure_ascii=False, indent=2, cls=EnhancedJSONEncoder)
