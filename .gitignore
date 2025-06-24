@@ -1,7 +1,6 @@
 .aider*
 # Ignore environment files
 .env
-.env.*
 
 # Ignore JSON data files
 *.json
