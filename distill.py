@@ -6,6 +6,8 @@ import os
 import json
 from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, TrainingArguments, Trainer
+from transformers import DataCollatorWithPadding
+import torch.nn.functional as F
 
 class DistillationDataset(Dataset):
     def __init__(self, file_path, tokenizer, max_length=2048):
@@ -30,29 +32,46 @@ class DistillationDataset(Dataset):
         processed = []
         for conversation in self.data:
             messages = conversation['messages']
-            if len(messages) < 2 or 'logprobs' not in messages[1] or 'top_logprobs' not in messages[1]['logprobs']:
+            if len(messages) < 2 or not messages[1].get('logprobs'):
                 continue
                 
             prompt = messages[0]['content']
             response = messages[1]['content']
-            prompt_enc = self.tokenizer(prompt, truncation=True, max_length=self.max_length//2)
-            response_enc = self.tokenizer(response, truncation=True, max_length=self.max_length//2)
             
-            # Extract teacher logits for each token
+            # Extract teacher logits from assistant message
             logits_list = []
             for token_record in messages[1]['logprobs']['content']:
-                logits_list.append(self._get_full_logits(token_record['top_logprobs']))
+                token_logits = torch.full((self.tokenizer.vocab_size,), -10000.0)
+                for top_logprob in token_record['top_logprobs']:
+                    token = top_logprob['token']
+                    if not isinstance(token, bytes):
+                        token = token.encode('utf-8', 'backslashreplace')
+                    token_id = self.tokenizer.convert_tokens_to_ids(token)
+                    token_logits[token_id] = top_logprob['logprob']
+                logits_list.append(token_logits)
             
+            # Process full prompt + response sequence
+            full_text = f"[INST] {prompt} [/INST] {response}"
+            encoding = self.tokenizer(
+                full_text,
+                truncation=True,
+                max_length=self.max_length,
+                return_tensors='pt',
+                padding='max_length'
+            )
+            
+            # Find response start position
+            prompt_enc = self.tokenizer(f"[INST] {prompt} [/INST]", return_tensors='pt')
+            response_start = len(prompt_enc.input_ids[0])
+
             sample = {
-                'input_ids': prompt_enc['input_ids'],
-                'attention_mask': prompt_enc['attention_mask'],
-                'labels': response_enc['input_ids'],
-                'teacher_logits': torch.stack(logits_list)
+                'input_ids': encoding.input_ids[0],
+                'attention_mask': encoding.attention_mask[0],
+                'response_start': response_start,
+                'teacher_logits': torch.stack(logits_list),
+                'labels': encoding.input_ids[0].clone()
             }
             processed.append(sample)
-        
-        if not processed:
-            raise ValueError("No valid distillation samples found. Check your JSON contains 'logprobs' data.")
         
         return processed
 
@@ -62,6 +81,30 @@ class DistillationDataset(Dataset):
     def __getitem__(self, idx):
         return self.processed_samples[idx]
 
+class DistillCollator(DataCollatorWithPadding):
+    def __init__(self, tokenizer):
+        super().__init__(tokenizer, padding=True)
+        
+    def __call__(self, features):
+        batch = super().__call__(features)
+        
+        # Handle teacher logits padding
+        max_len = max([f['teacher_logits'].shape[0] for f in features])
+        padded_logits = []
+        response_starts = []
+        
+        for f in features:
+            logits = f['teacher_logits']
+            pad_size = max_len - logits.shape[0]
+            padded_logits.append(
+                F.pad(logits, (0, 0, 0, pad_size), value=-10000.0)
+            )
+            response_starts.append(f['response_start'])
+            
+        batch['teacher_logits'] = torch.stack(padded_logits)
+        batch['response_starts'] = torch.tensor(response_starts)
+        return batch
+
 class DistillationTrainer(Trainer):
     def __init__(self, *args, alpha=0.7, temperature=2.0, **kwargs):
         super().__init__(*args, **kwargs)
@@ -70,31 +113,58 @@ class DistillationTrainer(Trainer):
     
     def compute_loss(self, model, inputs, return_outputs=False):
         # Forward pass
-        outputs = model(input_ids=inputs['input_ids'], attention_mask=inputs['attention_mask'])
+        outputs = model(
+            input_ids=inputs['input_ids'],
+            attention_mask=inputs['attention_mask']
+        )
         student_logits = outputs.logits
         
-        # Distillation loss
-        teacher_logits = inputs['teacher_logits'].to(student_logits.device)
-        teacher_probs = F.softmax(teacher_logits / self.temperature, dim=-1)
-        student_log_probs = F.log_softmax(student_logits / self.temperature, dim=-1)
+        # Extract relevant logits
+        dist_losses = []
+        label_losses = []
         
-        distillation_loss = F.kl_div(
-            student_log_probs, teacher_probs, 
-            reduction='batchmean', log_target=False
-        ) * (self.temperature ** 2)
+        for i in range(inputs['input_ids'].shape[0]):
+            # Skip padded entries
+            if inputs['response_starts'][i] == -1:
+                continue
+                
+            # Extract response section
+            start_idx = inputs['response_starts'][i] - 1  # -1 for prediction offset
+            end_idx = min(
+                start_idx + inputs['teacher_logits'][i].shape[0], 
+                student_logits.shape[1] - 1
+            )
+            
+            # Prepare distillation loss
+            valid_teacher_logits = inputs['teacher_logits'][i][:end_idx - start_idx]
+            student_resp_logits = student_logits[i, start_idx:end_idx]
+            
+            teacher_probs = F.softmax(valid_teacher_logits / self.temperature, dim=-1)
+            student_log_probs = F.log_softmax(student_resp_logits / self.temperature, dim=-1)
+            dist_loss = F.kl_div(
+                student_log_probs, teacher_probs, 
+                reduction='batchmean', log_target=False
+            ) * (self.temperature ** 2)
+            
+            # Prepare label loss
+            shift_labels = inputs['labels'][i, start_idx+1:end_idx+1]
+            label_loss = F.cross_entropy(
+                student_resp_logits[1:].contiguous().view(-1, student_resp_logits.size(-1)),
+                shift_labels.contiguous().view(-1),
+                ignore_index=self.tokenizer.pad_token_id
+            )
+            
+            dist_losses.append(dist_loss)
+            label_losses.append(label_loss)
         
-        # Label loss
-        shift_logits = student_logits[..., :-1, :].contiguous()
-        shift_labels = inputs['labels'][..., 1:].contiguous()
+        # Handle empty batch
+        if not dist_losses:
+            return torch.tensor(0.0, device=student_logits.device)
         
-        label_loss = F.cross_entropy(
-            shift_logits.view(-1, shift_logits.size(-1)),
-            shift_labels.view(-1),
-            ignore_index = -100
-        )
-        
-        # Combined loss
-        total_loss = self.alpha * distillation_loss + (1 - self.alpha) * label_loss
+        # Combine losses
+        avg_dist_loss = torch.stack(dist_losses).mean()
+        avg_label_loss = torch.stack(label_losses).mean()
+        total_loss = self.alpha * avg_dist_loss + (1 - self.alpha) * avg_label_loss
         
         return (total_loss, outputs) if return_outputs else total_loss
 
@@ -116,6 +186,7 @@ bnb_config = BitsAndBytesConfig(
 
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 tokenizer.pad_token = tokenizer.eos_token
+tokenizer.padding_side = "right"
 
 model = AutoModelForCausalLM.from_pretrained(
     model_name,
@@ -125,25 +196,23 @@ model = AutoModelForCausalLM.from_pretrained(
 
 # Dataset and dataloader
 dataset = DistillationDataset(data_file, tokenizer)
-train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
-
-# Training setup
+collator = DistillCollator(tokenizer)
 training_args = TrainingArguments(
     output_dir="distill_output",
     per_device_train_batch_size=batch_size,
     gradient_accumulation_steps=grad_acc_steps,
     learning_rate=learning_rate,
-    num_train_epochs=1,
+    num_train_epochs=3,  # Increased epochs for better convergence
     fp16=True,
     save_strategy="epoch",
-    logging_steps=10,
-    remove_unused_columns=False
+    logging_steps=10
 )
 
 trainer = DistillationTrainer(
     model=model,
     args=training_args,
     train_dataset=dataset,
+    data_collator=collator,
     alpha=alpha,
     temperature=temperature
 )
