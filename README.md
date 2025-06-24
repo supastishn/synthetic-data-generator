@@ -22,9 +22,14 @@ TEMPERATURE=0.7
 TOPICS=topic1,topic2
 AMOUNTS=3,2
 MULTI_PROMPT=y
-LOGITS=n
+LOGITS=y    # Set to y to enable logits capture
 OUTPUT_FILE=my_conversations.json
 ```
+
+## Logits Capture
+When `LOGITS=y`:
+- Assistant responses will include token-level probability data from the model
+- This data includes the top 10 token candidates at each position with their log probabilities
 
 ## Environment Variables
 | Variable | Description | Default |
@@ -34,7 +39,7 @@ OUTPUT_FILE=my_conversations.json
 | `TEMPERATURE` | Creativity level (0.0-1.0) | 0.7 |
 | `TOPICS` | Comma-separated list of topics | *Required* |
 | `AMOUNTS` | Number of prompts per topic (single or comma-separated) | *Required* |
-| `MULTI_PROMPT` | Use multi-prompt generation? (y/n) | y |
+| `MULTI_PROMPT` | Use multi-prompt generation? (Y/n) | y |
 | `LOGITS` | Use logits for answer generation? (y/n) | n |
 | `OUTPUT_FILE` | Output JSON filename | conversations.json |
 
@@ -57,8 +62,27 @@ Conversations are saved in JSON format:
 [
   {
     "messages": [
-      {"role": "user", "content": "Example prompt"},
-      {"role": "assistant", "content": "Example answer"}
+      {
+        "role": "user",
+        "content": "Explain quantum computing in simple terms"
+      },
+      {
+        "role": "assistant",
+        "content": "Quantum computing leverages quantum mechanics to process information...",
+        "logprobs": {
+          "content": [
+            {
+              "token": "Quantum",
+              "logprob": -0.1,
+              "top_logprobs": [
+                {"token": "Quantum", "logprob": -0.1},
+                {"token": "This", "logprob": -1.2},
+                ...
+              ]
+            }
+          ]
+        }
+      }
     ]
   }
 ]
@@ -76,4 +100,5 @@ AMOUNTS=2
 python main.py
 
 # Outputs conversations to conversations.json
+The output will contain token probability data when LOGITS=y
 ```
