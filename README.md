@@ -2,6 +2,9 @@
 
 This tool generates structured conversations (prompts and answers) based on specified topics using language models.
 
+## Requirements
+- Requires LiteLLM for API access
+
 ## Features
 - Generate multiple prompts per topic
 - Generate assistant answers for each prompt
@@ -26,6 +29,17 @@ LOGITS=y    # Set to y to enable logits capture
 OUTPUT_FILE=my_conversations.json
 MODEL_SPLIT=50,25,25   # For multiple answer models, comma-separated percentages (sum=100)
 ```
+
+## API Keys
+Set API keys using environment variables before running:
+```bash
+export OPENAI_API_KEY=sk-xxxx  # For OpenAI models
+export ANTHROPIC_API_KEY=sk-xxxx  # For Claude models
+```
+The key required depends on your preferred provider:
+- Follow LiteLLM's environment variable naming: https://litellm.vercel.app/docs/providers
+- Keys should be set in your shell or `.env` file
+- Run `litellm --help` to see all supported providers
 
 ## Logits Capture
 When `LOGITS=y`:
@@ -103,10 +117,9 @@ AMOUNTS=2
 
 # Command:
 python main.py
+```
 
-# Outputs conversations to conversations.json
-Additional features:
-- Each message shows which model generated it
-- Supports multiple answer models with percentage splits (see MODEL_SPLIT)
-The output will contain token probability data when LOGITS=y
+## Notes
+- Uses [LiteLLM](https://github.com/BerriAI/liteLLM) format for API access
+- Check `.env.example` for configuration reference
 ```
