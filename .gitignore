@@ -1,6 +1,5 @@
 .aider*
 # Ignore environment files
-.env
 
 # Ignore JSON data files
 *.json
@@ -17,4 +16,4 @@ build/
 # Ignore editor files
 *.swp
 *.swo
-*~
+*:~
