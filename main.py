@@ -94,6 +94,21 @@ output_file = get_env_or_prompt(
     "conversations.json"
 )
 
+append_mode = get_env_or_prompt(
+    "APPEND",
+    "Append to output file if exists? (y/N): ",
+    "n"
+).lower() == "y"
+
+existing_conversations = []
+if append_mode and os.path.exists(output_file):
+    try:
+        with open(output_file, 'r', encoding='utf-8') as f:
+            existing_conversations = json.load(f)
+        print(f"Loaded {len(existing_conversations)} existing conversations from {output_file}.")
+    except Exception as e:
+        print(f"WARNING: Failed to load existing file {output_file}: {e}. Starting new file.")
+
 verbose_logging = get_env_or_prompt(
     "VERBOSE_LOGGING",
     "Enable verbose logging for requests/responses? (y/N): ",
@@ -283,12 +298,12 @@ async def generate_answers_async(messages_list, models_list, logits):
 
     return await asyncio.gather(*tasks)
 
-conversations = []
+conversations = existing_conversations[:]  # Start with existing conversations
+new_conversations_indices = list(range(len(conversations), len(conversations) + sum(amounts)))
 
 # Prompt generation (sync or async)
 if async_gen:
     # Process topics sequentially with async batching within each topic
-    conversations = []
     loop = asyncio.get_event_loop()
     for topic_index, current_topic in enumerate(topics):
         amount_for_topic = amounts[topic_index]
@@ -297,6 +312,8 @@ if async_gen:
         )
         for batch in batches:
             for user_prompt in batch:
+                if len(conversations) not in new_conversations_indices:
+                    continue  # Skip non-new indices
                 user_prompt = dict(user_prompt)
                 user_prompt["generation_model"] = promptgen_model
                 conversations.append({"messages": [user_prompt]})
@@ -306,6 +323,8 @@ else:
         amount_for_topic = amounts[topic_index]
         user_prompts = generate_prompts(current_topic, amount_for_topic)
         for user_prompt in user_prompts:
+            if len(conversations) not in new_conversations_indices:
+                continue  # Skip non-new indices
             user_prompt = dict(user_prompt)
             user_prompt["generation_model"] = promptgen_model
             conversations.append({"messages": [user_prompt]})
@@ -325,16 +344,26 @@ random.shuffle(assigned_models)
 # Answer generation (sync or async)
 if async_gen:
     async def gather_answers():
-        messages_list = [conv["messages"] for conv in conversations]
+        messages_list = []
+        for idx, conv in enumerate(conversations):
+            if idx not in new_conversations_indices:
+                continue  # Skip existing conversations
+            messages_list.append(conv["messages"])
         updated_messages = await generate_answers_async(
-            messages_list, assigned_models, logits
+            messages_list, assigned_models[-len(messages_list):], logits
         )
-        for idx, (conv, updated) in enumerate(zip(conversations, updated_messages)):
-            conv["messages"] = updated
+        update_idx = 0
+        for idx, conv in enumerate(conversations):
+            if idx not in new_conversations_indices:
+                continue
+            conv["messages"] = updated_messages[update_idx]
             conv["model"] = assigned_models[idx]
+            update_idx += 1
     asyncio.get_event_loop().run_until_complete(gather_answers())
 else:
     for idx, conversation in enumerate(conversations):
+        if idx not in new_conversations_indices:
+            continue  # Skip existing conversations
         model_to_use = assigned_models[idx]
         conversation['messages'] = generate_answers(
             conversation['messages'],
@@ -344,6 +373,6 @@ else:
         conversation['model'] = model_to_use
 
 # Add at the very end of the script, after processing conversations
-print(f"\nSaving {len(conversations)} conversations to {output_file}")
+print(f"\nSaved {len(new_conversations_indices)} new conversations (total: {len(conversations)}) to {output_file}")
 with open(output_file, 'w', encoding='utf-8') as f:
     json.dump(conversations, f, ensure_ascii=False, indent=2, cls=EnhancedJSONEncoder)
