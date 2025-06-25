@@ -44,6 +44,13 @@ def get_env_or_prompt(env_var, prompt, default=None):
         return default
     return user_input
 
+# At the top with other env variables
+prompt_instructions = get_env_or_prompt(
+    "PROMPT_INSTRUCT",
+    "Enter custom instructions for the prompt generation model (optional): ",
+    ""
+)
+
 # Replace model handling
 promptgen_model = get_env_or_prompt("PROMPTGEN_MODEL", "Please enter the model name for generating prompts: ")
 if not promptgen_model:
@@ -171,12 +178,22 @@ async_gen = get_env_or_prompt(
 if len(amounts) == 1:
     amounts = [amounts[0]] * len(topics)
 
-def generate_prompts(topic = "Any", amount = 1):
+def generate_prompts(topic = "Any", amount = 1, prompt_instructions=""):
     if verbose_logging:
         print(f"\n{'='*40}\nGenerating {amount} prompts for: {topic}\n{'='*40}")
 
     user_message = f"""
-    Generate exactly {amount} prompts for '{topic}'.
+    Generate exactly {amount} prompts for '{topic}'."""
+
+    # Add the instructions block if provided
+    if prompt_instructions:
+        user_message += f"""
+
+    Additional Instructions:
+    {prompt_instructions}"""
+
+    user_message += """
+
     Format requirements:
     1. Each prompt must be wrapped in <prompt> tags
     2. Output ONLY the XML-formatted prompts with no additional text
@@ -290,7 +307,7 @@ def generate_answers(messages, model_to_use, logits=False):
 
 # --- Async support functions ---
 
-async def generate_prompts_async(topic, amount, batch_size):
+async def generate_prompts_async(topic, amount, batch_size, prompt_instructions=""):
     pool = concurrent.futures.ThreadPoolExecutor()
     batches = (amount + batch_size - 1) // batch_size
     tasks = []
@@ -301,7 +318,7 @@ async def generate_prompts_async(topic, amount, batch_size):
         remaining -= task_amount
         tasks.append(
             asyncio.get_event_loop().run_in_executor(
-                pool, generate_prompts, topic, task_amount
+                pool, generate_prompts, topic, task_amount, prompt_instructions
             )
         )
 
@@ -330,7 +347,7 @@ if async_gen:
     for topic_index, current_topic in enumerate(topics):
         amount_for_topic = amounts[topic_index]
         batches = loop.run_until_complete(
-            generate_prompts_async(current_topic, amount_for_topic, batch_size)
+            generate_prompts_async(current_topic, amount_for_topic, batch_size, prompt_instructions)
         )
         for batch in batches:
             for user_prompt in batch:
@@ -343,7 +360,7 @@ else:
     # Sync prompt generation (original code)
     for topic_index, current_topic in enumerate(topics):
         amount_for_topic = amounts[topic_index]
-        user_prompts = generate_prompts(current_topic, amount_for_topic)
+        user_prompts = generate_prompts(current_topic, amount_for_topic, prompt_instructions)
         for user_prompt in user_prompts:
             if len(conversations) not in new_conversations_indices:
                 continue  # Skip non-new indices
