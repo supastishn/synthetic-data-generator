@@ -287,24 +287,19 @@ conversations = []
 
 # Prompt generation (sync or async)
 if async_gen:
-    # Async prompt generation
-    async def gather_prompts():
-        tasks = []
-        for topic_idx, current_topic in enumerate(topics):
-            amount_for_topic = amounts[topic_idx]
-            tasks.append(
-                generate_prompts_async(current_topic, amount_for_topic, batch_size)
-            )
-        topic_results = await asyncio.gather(*tasks)
-        convs = []
-        for topic_batches in topic_results:
-            for batch in topic_batches:
-                for user_prompt in batch:
-                    user_prompt = dict(user_prompt)
-                    user_prompt["generation_model"] = promptgen_model
-                    convs.append({"messages": [user_prompt]})
-        return convs
-    conversations = asyncio.get_event_loop().run_until_complete(gather_prompts())
+    # Process topics sequentially with async batching within each topic
+    conversations = []
+    loop = asyncio.get_event_loop()
+    for topic_index, current_topic in enumerate(topics):
+        amount_for_topic = amounts[topic_index]
+        batches = loop.run_until_complete(
+            generate_prompts_async(current_topic, amount_for_topic, batch_size)
+        )
+        for batch in batches:
+            for user_prompt in batch:
+                user_prompt = dict(user_prompt)
+                user_prompt["generation_model"] = promptgen_model
+                conversations.append({"messages": [user_prompt]})
 else:
     # Sync prompt generation (original code)
     for topic_index, current_topic in enumerate(topics):
