@@ -186,7 +186,9 @@ batch_size = int(os.getenv("BATCH_SIZE", 4))
 grad_acc_steps = int(os.getenv("GRAD_ACC_STEPS", 4))
 learning_rate = float(os.getenv("LEARNING_RATE", 2e-5))
 alpha = float(os.getenv("ALPHA", 0.7))
-temperature = float(os.getenv("TEMPERATURE", 2.0))
+# Use DISTILL_TEMPERATURE for backwards compatibility
+distill_temp = os.getenv("DISTILL_TEMPERATURE", os.getenv("TEMPERATURE", "2.0"))
+temperature = float(distill_temp)
 
 # Model setup
 bnb_config = BitsAndBytesConfig(
