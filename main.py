@@ -274,7 +274,7 @@ def generate_answers(messages, model_to_use, logits=False):
     
     # Prepend reasoning if present
     if reasoning_text:
-        assistant_content = f"<thinking>\n{reasoning_text}\n</thinking>\n\n{assistant_content}"
+        assistant_content = f"<think>\n{reasoning_text}\n</think>\n\n{assistant_content}"
     
     result_message = {
         "role": "assistant",
