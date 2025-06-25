@@ -254,11 +254,31 @@ def generate_answers(messages, model_to_use, logits=False):
     if verbose_logging:
         log_response(response, model_to_use)
 
-    assistant_response = response.choices[0].message.content.strip()
-
+    # Extract the core response content
+    assistant_content = response.choices[0].message.content.strip()
+    
+    # Check for optional reasoning/thinking data
+    reasoning_content = getattr(response.choices[0].message, 'reasoning_content', None)
+    thinking_blocks = getattr(response.choices[0].message, 'thinking_blocks', [])
+    
+    reasoning_text = ""
+    if reasoning_content:
+        reasoning_text = reasoning_content.strip()
+    elif thinking_blocks:
+        # Combine all thinking blocks into one string
+        reasoning_text = "\n\n".join(
+            block.get("thinking", "").strip()
+            for block in thinking_blocks
+            if block.get("type") == "thinking" and block.get("thinking")
+        )
+    
+    # Prepend reasoning if present
+    if reasoning_text:
+        assistant_content = f"<thinking>\n{reasoning_text}\n</thinking>\n\n{assistant_content}"
+    
     result_message = {
         "role": "assistant",
-        "content": assistant_response,
+        "content": assistant_content,
         "generation_model": model_to_use
     }
 
