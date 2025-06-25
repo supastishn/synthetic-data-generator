@@ -62,6 +62,7 @@ When `LOGITS=y`:
 | `OUTPUT_FILE` | Output JSON filename | conversations.json |
 | `BATCH_SIZE` | Batch size for prompt generation | 5 |
 | `ASYNC_GEN` | Enable asynchronous generation? (y/n) | n |
+| `VERBOSE_LOGGING` | Print request/response bodies | n |
 
 ## Usage
 Run the script:

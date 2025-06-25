@@ -7,7 +7,21 @@ import json  # Add for JSON serialization
 import asyncio
 import concurrent.futures
 
-# Add after other imports
+def log_request(model, messages, **kwargs):
+    print(f"\n[VERBOSE] REQUEST to {model}:")
+    print(f"Messages: {json.dumps(messages, indent=2)}")
+    if kwargs:
+        print(f"Options: {json.dumps(kwargs, indent=2)}")
+
+def log_response(response, model):
+    content = response.choices[0].message.content
+    logprobs = bool(getattr(response.choices[0].message, 'logprobs', None))
+    
+    print(f"\n[VERBOSE] RESPONSE from {model}:")
+    print(f"Content: {content[:400]}{'...' if len(content) > 400 else ''}")
+    if logprobs:
+        print(f"Logprobs: captured ({len(response.choices[0].logprobs.content)} tokens)")
+
 class EnhancedJSONEncoder(json.JSONEncoder):
     def default(self, o):
         if hasattr(o, 'to_dict'):
@@ -80,6 +94,12 @@ output_file = get_env_or_prompt(
     "conversations.json"
 )
 
+verbose_logging = get_env_or_prompt(
+    "VERBOSE_LOGGING",
+    "Enable verbose logging for requests/responses? (y/N): ",
+    "n"
+).lower() == "y"
+
 # Replace TOPICS handling
 topic = get_env_or_prompt("TOPICS", "Please enter 1 or more topics, separated by a comma: ")
 topics = [t.strip() for t in topic.split(",")]
@@ -135,7 +155,8 @@ if len(amounts) == 1:
     amounts = [amounts[0]] * len(topics)
 
 def generate_prompts(topic = "Any", amount = 1):
-    print(f"Generating {amount} prompts for topic: {topic} ")
+    if verbose_logging:
+        print(f"\n{'='*40}\nGenerating {amount} prompts for: {topic}\n{'='*40}")
 
     user_message = f"""
     Generate exactly {amount} prompts for '{topic}'.
@@ -145,7 +166,13 @@ def generate_prompts(topic = "Any", amount = 1):
     3. Example format: <prompt>Your prompt here</prompt>
     4. For multiple prompts, output them consecutively without separators   
     """
-    
+
+    if verbose_logging:
+        log_request(promptgen_model, [
+            {"content": "You output only in XML format. Wrap all prompts in <prompt> tags. Do not include any explanations or additional text.", "role": "system"},
+            {"content": user_message, "role": "user"}
+        ], temperature=temp)
+
     response = completion(
         model=promptgen_model,
         messages=[
@@ -157,7 +184,10 @@ def generate_prompts(topic = "Any", amount = 1):
         ],
         temperature=temp,
     )
-    
+
+    if verbose_logging:
+        log_response(response, promptgen_model)
+
     # Extract and parse XML content
     xml_resp = response.choices[0].message.content
 
@@ -194,12 +224,18 @@ def generate_answers(messages, model_to_use, logits=False):
         response_options["logprobs"] = True
         response_options["top_logprobs"] = 10
 
+    if verbose_logging:
+        log_request(model_to_use, messages, temperature=temp, **response_options)
+
     response = completion(
         model=model_to_use,
         messages=messages,
         temperature=temp,
         **response_options
     )
+
+    if verbose_logging:
+        log_response(response, model_to_use)
 
     assistant_response = response.choices[0].message.content.strip()
 
