@@ -188,7 +188,7 @@ def generate_prompts(topic = "Any", amount = 1):
         log_request(promptgen_model, [
             {"content": "You output only in XML format. Wrap all prompts in <prompt> tags. Do not include any explanations or additional text.", "role": "system"},
             {"content": user_message, "role": "user"}
-        ], temperature=temp)
+        ], temperature=1)
 
     response = completion(
         model=promptgen_model,
