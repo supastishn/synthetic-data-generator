@@ -239,23 +239,32 @@ def generate_prompts(topic = "Any", amount = 1, prompt_instructions=""):
         print(f"Received response: {xml_resp}")
         exit(1)
 
-    # Build clean XML structure by wrapping elements
-    xml_clean = f"<root>{''.join(prompt_parts)}</root>"
-
     result = []
-    try:
-        root = ET.fromstring(xml_clean)
-        for prompt_elem in root.findall('prompt'):
+    # Parse each prompt block individually to give better error context
+    for xml_block in prompt_parts:
+        try:
+            # Wrap in root element for ETree
+            prompt_root = ET.fromstring(f"<root>{xml_block}</root>")
+            prompt_elem = prompt_root.find('prompt')
+            if prompt_elem is None:
+                print(f"ERROR: Expected <prompt> tag not found in block for topic '{topic}'")
+                print(f"XML Block: {xml_block}")
+                exit(1)
+                
             system_elem = prompt_elem.find('system')
             user_elem = prompt_elem.find('user')
             
+            # Validate and extract system content
             if system_elem is None or system_elem.text is None or not system_elem.text.strip():
                 print(f"ERROR: Missing or empty <system> tag in prompt for topic '{topic}'")
+                print(f"XML Block: {xml_block}")
                 exit(1)
             system_content = system_elem.text.strip()
             
+            # Validate and extract user content
             if user_elem is None or user_elem.text is None or not user_elem.text.strip():
                 print(f"ERROR: Missing or empty <user> tag in prompt for topic '{topic}'")
+                print(f"XML Block: {xml_block}")
                 exit(1)
             user_content = user_elem.text.strip()
             
@@ -263,11 +272,11 @@ def generate_prompts(topic = "Any", amount = 1, prompt_instructions=""):
                 {"role": "system", "content": system_content, "generation_model": promptgen_model},
                 {"role": "user", "content": user_content, "generation_model": promptgen_model}
             ])
-        return result
-    except ET.ParseError as e:
-        print(f"XML Parsing failed for topic '{topic}': {e}")
-        print(f"Cleaned XML block: {xml_clean}")
-        exit(1)
+        except ET.ParseError as e:
+            print(f"XML Parsing failed for topic '{topic}' in block: {e}")
+            print(f"Problematic XML Block: {xml_block}")
+            exit(1)
+    return result
 
 
 
