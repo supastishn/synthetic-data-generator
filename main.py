@@ -195,15 +195,20 @@ def generate_prompts(topic = "Any", amount = 1, prompt_instructions=""):
     user_message += """
 
     Format requirements:
-    1. Each prompt must be wrapped in <prompt> tags
+    1. Each prompt must be wrapped in <prompt> tags with nested <system> and <user> tags
     2. Output ONLY the XML-formatted prompts with no additional text
-    3. Example format: <prompt>Your prompt here</prompt>
-    4. For multiple prompts, output them consecutively without separators   
+    3. Example format: 
+       <prompt>
+          <system>System instruction for AI</system>
+          <user>User question</user>
+       </prompt>
+    4. The <system> tag is optional; if absent, use just <user>
+    5. For multiple prompts, output them consecutively without separators   
     """
 
     if verbose_logging:
         log_request(promptgen_model, [
-            {"content": "You output only in XML format. Wrap all prompts in <prompt> tags. Do not include any explanations or additional text.", "role": "system"},
+            {"content": "You output only in XML format. Use <prompt>, <system>, and <user> tags. Do not include any explanations or additional text.", "role": "system"},
             {"content": user_message, "role": "user"}
         ], temperature=1)
 
@@ -211,7 +216,7 @@ def generate_prompts(topic = "Any", amount = 1, prompt_instructions=""):
         model=promptgen_model,
         messages=[
             {  # More strict system message
-                "content": "You output only in XML format. Wrap all prompts in <prompt> tags. Do not include any explanations or additional text.",
+                "content": "You output only in XML format. Use <prompt>, <system>, and <user> tags. Do not include any explanations or additional text.",
                 "role": "system"
             },
             {"content": user_message, "role": "user"}
@@ -238,12 +243,25 @@ def generate_prompts(topic = "Any", amount = 1, prompt_instructions=""):
     result = []
     try:
         root = ET.fromstring(xml_clean)
-        for elem in root.findall('prompt'):
-            if elem.text and elem.text.strip():
-                result.append({
-                    "role": "user",
-                    "content": elem.text.strip()
-                })
+        for prompt_elem in root.findall('prompt'):
+            system_content = None
+            user_content = None
+            system_elem = prompt_elem.find('system')
+            if system_elem is not None and system_elem.text and system_elem.text.strip():
+                system_content = system_elem.text.strip()
+            user_elem = prompt_elem.find('user')
+            if user_elem is not None and user_elem.text and user_elem.text.strip():
+                user_content = user_elem.text.strip()
+            if user_content:  # Must have at least a user message
+                if system_content:
+                    result.append([
+                        {"role": "system", "content": system_content, "generation_model": promptgen_model},
+                        {"role": "user", "content": user_content, "generation_model": promptgen_model}
+                    ])
+                else:
+                    result.append([
+                        {"role": "user", "content": user_content, "generation_model": promptgen_model}
+                    ])
         return result
     except ET.ParseError as e:
         print(f"XML Parsing failed for topic '{topic}': {e}")
@@ -350,23 +368,19 @@ if async_gen:
             generate_prompts_async(current_topic, amount_for_topic, batch_size, prompt_instructions)
         )
         for batch in batches:
-            for user_prompt in batch:
+            for group in batch:
                 if len(conversations) not in new_conversations_indices:
                     continue  # Skip non-new indices
-                user_prompt = dict(user_prompt)
-                user_prompt["generation_model"] = promptgen_model
-                conversations.append({"messages": [user_prompt]})
+                conversations.append({"messages": group})
 else:
     # Sync prompt generation (original code)
     for topic_index, current_topic in enumerate(topics):
         amount_for_topic = amounts[topic_index]
-        user_prompts = generate_prompts(current_topic, amount_for_topic, prompt_instructions)
-        for user_prompt in user_prompts:
+        prompt_groups = generate_prompts(current_topic, amount_for_topic, prompt_instructions)
+        for group in prompt_groups:
             if len(conversations) not in new_conversations_indices:
                 continue  # Skip non-new indices
-            user_prompt = dict(user_prompt)
-            user_prompt["generation_model"] = promptgen_model
-            conversations.append({"messages": [user_prompt]})
+            conversations.append({"messages": group})
 
 # Assign answer models to conversations according to splits
 assigned_models = []
