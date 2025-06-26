@@ -240,42 +240,28 @@ def generate_prompts(topic = "Any", amount = 1, prompt_instructions=""):
         exit(1)
 
     result = []
-    # Parse each prompt block individually to give better error context
+    # Parse each prompt block with regex to allow content with angle brackets
     for xml_block in prompt_parts:
-        try:
-            # Wrap in root element for ETree
-            prompt_root = ET.fromstring(f"<root>{xml_block}</root>")
-            prompt_elem = prompt_root.find('prompt')
-            if prompt_elem is None:
-                print(f"ERROR: Expected <prompt> tag not found in block for topic '{topic}'")
-                print(f"XML Block: {xml_block}")
-                exit(1)
-                
-            system_elem = prompt_elem.find('system')
-            user_elem = prompt_elem.find('user')
-            
-            # Validate and extract system content
-            if system_elem is None or system_elem.text is None or not system_elem.text.strip():
-                print(f"ERROR: Missing or empty <system> tag in prompt for topic '{topic}'")
-                print(f"XML Block: {xml_block}")
-                exit(1)
-            system_content = system_elem.text.strip()
-            
-            # Validate and extract user content
-            if user_elem is None or user_elem.text is None or not user_elem.text.strip():
-                print(f"ERROR: Missing or empty <user> tag in prompt for topic '{topic}'")
-                print(f"XML Block: {xml_block}")
-                exit(1)
-            user_content = user_elem.text.strip()
-            
-            result.append([
-                {"role": "system", "content": system_content, "generation_model": promptgen_model},
-                {"role": "user", "content": user_content, "generation_model": promptgen_model}
-            ])
-        except ET.ParseError as e:
-            print(f"XML Parsing failed for topic '{topic}' in block: {e}")
-            print(f"Problematic XML Block: {xml_block}")
+        # Extract system content
+        system_match = re.search(r'<system>(.*?)</system>', xml_block, re.DOTALL)
+        if not system_match:
+            print(f"ERROR: Could not find <system> tags in prompt for topic '{topic}'")
+            print(f"XML Block: {xml_block}")
             exit(1)
+        system_content = system_match.group(1).strip()
+
+        # Extract user content
+        user_match = re.search(r'<user>(.*?)</user>', xml_block, re.DOTALL)
+        if not user_match:
+            print(f"ERROR: Could not find <user> tags in prompt for topic '{topic}'")
+            print(f"XML Block: {xml_block}")
+            exit(1)
+        user_content = user_match.group(1).strip()
+
+        result.append([
+            {"role": "system", "content": system_content, "generation_model": promptgen_model},
+            {"role": "user", "content": user_content, "generation_model": promptgen_model}
+        ])
     return result
 
 
