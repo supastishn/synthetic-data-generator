@@ -157,16 +157,16 @@ if logits_input == "y":
     logits = True
 
 # Batch size for prompt/answer generation
-batch_size = get_env_or_prompt(
-    "BATCH_SIZE",
+gen_batch_size = get_env_or_prompt(
+    "GEN_BATCH_SIZE",
     "Enter batch size for prompt generation (default 5): ",
     "5"
 )
 try:
-    batch_size = int(batch_size)
+    gen_batch_size = int(gen_batch_size)
 except ValueError:
     print("Invalid batch size. Using default 5")
-    batch_size = 5
+    gen_batch_size = 5
 
 # Async generation flag
 async_gen = get_env_or_prompt(
@@ -361,7 +361,7 @@ if async_gen:
     for topic_index, current_topic in enumerate(topics):
         amount_for_topic = amounts[topic_index]
         batches = loop.run_until_complete(
-            generate_prompts_async(current_topic, amount_for_topic, batch_size, prompt_instructions)
+            generate_prompts_async(current_topic, amount_for_topic, gen_batch_size, prompt_instructions)
         )
         for batch in batches:
             for group in batch:
