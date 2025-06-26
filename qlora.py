@@ -40,22 +40,28 @@ model = FastLanguageModel.get_peft_model(
 )
 
 def convert_conversation_to_pair(messages):
-    """Convert conversation messages to human/assistant pair"""
+    """Convert conversation messages to system/human/assistant with optional system"""
+    system = ""
     human = ""
     assistant = ""
     for msg in messages:
-        if msg["role"] == "user":
+        if msg["role"] == "system":
+            system = msg["content"]
+        elif msg["role"] == "user":
             human = msg["content"]
         elif msg["role"] == "assistant":
             assistant = msg["content"]
-    return human, assistant
+    return system, human, assistant
 
 # Generate prompts for the dataset  
 def generate_prompt(data_point):
-    return {"text": f"""
-<Human>: {data_point['human']}
-<AI>: {data_point['assistant']}
-""".strip()}
+    parts = []
+    if data_point['system']:
+        parts.append(f"<System>: {data_point['system']}")
+    parts.append(f"<Human>: {data_point['human']}")
+    parts.append(f"<AI>: {data_point['assistant']}")
+    text = "\n".join(parts)
+    return {"text": text.strip()}
 
 # Load local conversations.json file
 with open('conversations.json', 'r') as f:
@@ -64,9 +70,9 @@ with open('conversations.json', 'r') as f:
 # Create pairs from conversations
 data_pairs = []
 for conversation in conversations_data:
-    human_msg, assistant_msg = convert_conversation_to_pair(conversation["messages"])
+    system_msg, human_msg, assistant_msg = convert_conversation_to_pair(conversation["messages"])
     if human_msg and assistant_msg:  # Only include valid pairs
-        data_pairs.append({"human": human_msg, "assistant": assistant_msg})
+        data_pairs.append({"system": system_msg, "human": human_msg, "assistant": assistant_msg})
 
 # Create dataset from the pairs
 dataset = Dataset.from_list(data_pairs).map(generate_prompt)
