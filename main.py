@@ -195,14 +195,16 @@ def generate_prompts(topic = "Any", amount = 1, prompt_instructions=""):
     user_message += """
 
     Format requirements:
-    1. Each prompt must be wrapped in <prompt> tags with nested <system> and <user> tags
-    2. Output ONLY the XML-formatted prompts with no additional text
-    3. Example format: 
+    1. Each prompt must be wrapped in <prompt> tags 
+    2. Each prompt must contain exactly two tags: 
+       - A <system> tag with a system prompt
+       - A <user> tag with a user prompt
+    3. Output ONLY the XML-formatted prompts with no additional text
+    4. Example format: 
        <prompt>
           <system>System instruction for AI</system>
           <user>User question</user>
        </prompt>
-    4. The <system> tag is optional; if absent, use just <user>
     5. For multiple prompts, output them consecutively without separators   
     """
 
@@ -244,24 +246,23 @@ def generate_prompts(topic = "Any", amount = 1, prompt_instructions=""):
     try:
         root = ET.fromstring(xml_clean)
         for prompt_elem in root.findall('prompt'):
-            system_content = None
-            user_content = None
             system_elem = prompt_elem.find('system')
-            if system_elem is not None and system_elem.text and system_elem.text.strip():
-                system_content = system_elem.text.strip()
             user_elem = prompt_elem.find('user')
-            if user_elem is not None and user_elem.text and user_elem.text.strip():
-                user_content = user_elem.text.strip()
-            if user_content:  # Must have at least a user message
-                if system_content:
-                    result.append([
-                        {"role": "system", "content": system_content, "generation_model": promptgen_model},
-                        {"role": "user", "content": user_content, "generation_model": promptgen_model}
-                    ])
-                else:
-                    result.append([
-                        {"role": "user", "content": user_content, "generation_model": promptgen_model}
-                    ])
+            
+            if system_elem is None or system_elem.text is None or not system_elem.text.strip():
+                print(f"ERROR: Missing or empty <system> tag in prompt for topic '{topic}'")
+                exit(1)
+            system_content = system_elem.text.strip()
+            
+            if user_elem is None or user_elem.text is None or not user_elem.text.strip():
+                print(f"ERROR: Missing or empty <user> tag in prompt for topic '{topic}'")
+                exit(1)
+            user_content = user_elem.text.strip()
+            
+            result.append([
+                {"role": "system", "content": system_content, "generation_model": promptgen_model},
+                {"role": "user", "content": user_content, "generation_model": promptgen_model}
+            ])
         return result
     except ET.ParseError as e:
         print(f"XML Parsing failed for topic '{topic}': {e}")
