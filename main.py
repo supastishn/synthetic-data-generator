@@ -217,12 +217,12 @@ def generate_prompts(topic="Any", amount=1, prompt_instructions="", prior_prompt
     if verbose_logging:
         print(f"\n{'='*40}\nGenerating {amount} prompts for: {topic}\n{'='*40}")
 
-    # Include prior prompts in context
-    prior_context = ""
+    # Only show prior USER prompts in context (skip system prompts)
+    user_prior_context = ""
     if prior_prompts:
-        prior_list = "\n".join([f"{i+1}. {p}" for i, p in enumerate(prior_prompts)])
-        prior_context = f"\n\nPrior prompts for '{topic}':\n{prior_list}\n\n"
-        diff_instruction = f" Make sure all new prompts are substantially different from these prior examples."
+        user_prior_list = "\n".join([f"{i+1}. {p}" for i, p in enumerate(prior_prompts)])
+        user_prior_context = f"\n\nPrior USER prompts (system prompts hidden) for '{topic}':\n{user_prior_list}\n\n"
+        diff_instruction = f" Ensure all new prompts are substantially different from these prior examples."
     else:
         diff_instruction = ""
 
@@ -230,11 +230,12 @@ def generate_prompts(topic="Any", amount=1, prompt_instructions="", prior_prompt
     Generate exactly {amount} BRAND NEW prompts for: '{topic}'.{diff_instruction}
     
     CRITICAL REQUIREMENTS:
-    - ALWAYS produce DIFFERENT prompts from prior ones
-    - Avoid repeating core concepts across prompts for the same topic
+    - ALWAYS produce COMPLETELY DIFFERENT prompts from prior ones
+    - NEVER reuse core concepts from shown prior examples
     - Ensure EVERY prompt has a UNIQUE approach and perspective
     
-    Each prompt must be UNIQUE and DISTINCT from all others.{prior_context}"""
+    You are ONLY seeing prior USER prompts below (system prompts hidden):{user_prior_context}
+    Each prompt must be UNIQUE and ORIGINAL relative to these."""
     
     # Add the instructions block if provided
     if prompt_instructions:
