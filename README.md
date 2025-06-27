@@ -19,6 +19,18 @@ This tool generates structured conversations (prompts and answers) based on spec
 ```bash
 pip install python-dotenv litellm
 ```
+
+## Migration
+
+To convert existing conversations files:
+```bash
+python migrate.py conversations.json
+```
+
+The script will:
+1. Create a backup (filename + ".bak")
+2. Convert all `\n` sequences to actual newlines
+3. Save the updated file
 2. Create a `.env` file (optional) with your environment variables:
 ```ini
 PROMPTGEN_MODEL=<your_prompt_generation_model>

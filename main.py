@@ -12,6 +12,11 @@ import time
 import random
 import litellm
 
+def unescape_newlines(s):
+    if not s:
+        return s
+    return s.replace('\\n', '\n').replace('\\t', '\t')
+
 def log_request(model, messages, **kwargs):
     print(f"\n[VERBOSE] REQUEST to {model}:")
     print(f"Messages: {json.dumps(messages, indent=2)}")
@@ -65,10 +70,12 @@ def get_env_or_prompt(env_var, prompt, default=None):
     return user_input
 
 # At the top with other env variables
-prompt_instructions = get_env_or_prompt(
-    "PROMPT_INSTRUCT",
-    "Enter custom instructions for the prompt generation model (optional): ",
-    ""
+prompt_instructions = unescape_newlines(
+    get_env_or_prompt(
+        "PROMPT_INSTRUCT",
+        "Enter custom instructions for the prompt generation model (optional): ",
+        ""
+    )
 )
 
 # Replace model handling
