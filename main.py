@@ -8,6 +8,9 @@ import re  # Add for XML fragment extraction
 import json  # Add for JSON serialization
 import asyncio
 import concurrent.futures
+import time
+import random
+import litellm
 
 def log_request(model, messages, **kwargs):
     print(f"\n[VERBOSE] REQUEST to {model}:")
@@ -23,6 +26,23 @@ def log_response(response, model):
     print(f"Content: {content[:400]}{'...' if len(content) > 400 else ''}")
     if logprobs:
         print(f"Logprobs: captured ({len(response.choices[0].logprobs.content)} tokens)")
+
+def is_retryable_exception(e):
+    # Built-in network/timeout errors
+    if isinstance(e, (ConnectionError, TimeoutError)):
+        return True
+        
+    # LiteLLM specific exceptions
+    if isinstance(e, (litellm.RateLimitError, litellm.Timeout, 
+                      litellm.APITimeoutError, litellm.ServiceUnavailableError)):
+        return True
+        
+    # Check by status code
+    code = getattr(e, 'status_code', None)
+    if code in [429, 500, 502, 503, 504]:
+        return True
+    
+    return False
 
 class EnhancedJSONEncoder(json.JSONEncoder):
     def default(self, o):
@@ -216,26 +236,42 @@ def generate_prompts(topic = "Any", amount = 1, prompt_instructions=""):
     5. For multiple prompts, output them consecutively without separators   
     """
 
-    if verbose_logging:
-        log_request(promptgen_model, [
-            {"content": "You output only in XML format. Use <prompt>, <system>, and <user> tags. Do not include any explanations or additional text.", "role": "system"},
-            {"content": user_message, "role": "user"}
-        ], temperature=0.7)
+    max_retries = 3  # Maximum retry attempts
+    base_delay = 1    # Base delay in seconds
+    attempt = 0
 
-    response = completion(
-        model=promptgen_model,
-        messages=[
-            {  # More strict system message
-                "content": "You output only in XML format. Use <prompt>, <system>, and <user> tags. Do not include any explanations or additional text.",
-                "role": "system"
-            },
-            {"content": user_message, "role": "user"}
-        ],
-        temperature=0.7,
-    )
+    while True:
+        try:
+            if verbose_logging:
+                log_request(promptgen_model, [
+                    {"content": "You output only in XML format. Use <prompt>, <system>, and <user> tags. Do not include any explanations or additional text.", "role": "system"},
+                    {"content": user_message, "role": "user"}
+                ], temperature=0.7)
 
-    if verbose_logging:
-        log_response(response, promptgen_model)
+            response = completion(
+                model=promptgen_model,
+                messages=[
+                    {  # More strict system message
+                        "content": "You output only in XML format. Use <prompt>, <system>, and <user> tags. Do not include any explanations or additional text.",
+                        "role": "system"
+                    },
+                    {"content": user_message, "role": "user"}
+                ],
+                temperature=0.7,
+            )
+
+            if verbose_logging:
+                log_response(response, promptgen_model)
+            break  # Exit loop on success
+        except Exception as e:
+            if attempt < max_retries and is_retryable_exception(e):
+                sleep_time = base_delay * (2 ** attempt) * (1 + random.random() * 0.1)  # Exponential backoff with jitter
+                print(f"⚠️ Generation failed: {str(e)}. Retry {attempt+1}/{max_retries} in {sleep_time:.1f}s")
+                time.sleep(sleep_time)
+                attempt += 1
+            else:
+                print(f"❌ Failed after {attempt} retries: {e}")
+                raise
 
     # Extract and parse XML content
     xml_resp = response.choices[0].message.content
@@ -280,18 +316,34 @@ def generate_answers(messages, model_to_use, logits=False):
         response_options["logprobs"] = True
         response_options["top_logprobs"] = 10
 
-    if verbose_logging:
-        log_request(model_to_use, messages, temperature=temp, **response_options)
+    max_retries = 3   # Maximum retry attempts
+    base_delay = 1    # Base delay in seconds
+    attempt = 0
 
-    response = completion(
-        model=model_to_use,
-        messages=messages,
-        temperature=temp,
-        **response_options
-    )
+    while True:
+        try:
+            if verbose_logging:
+                log_request(model_to_use, messages, temperature=temp, **response_options)
 
-    if verbose_logging:
-        log_response(response, model_to_use)
+            response = completion(
+                model=model_to_use,
+                messages=messages,
+                temperature=temp,
+                **response_options
+            )
+
+            if verbose_logging:
+                log_response(response, model_to_use)
+            break  # Exit loop on success
+        except Exception as e:
+            if attempt < max_retries and is_retryable_exception(e):
+                sleep_time = base_delay * (2 ** attempt) * (1 + random.random() * 0.1)  # Exponential backoff with jitter
+                print(f"⚠️ Generation failed: {str(e)}. Retry {attempt+1}/{max_retries} in {sleep_time:.1f}s")
+                time.sleep(sleep_time)
+                attempt += 1
+            else:
+                print(f"❌ Failed after {attempt} retries: {e}")
+                raise
 
     # Extract the core response content
     assistant_content = response.choices[0].message.content.strip()
