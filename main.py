@@ -168,6 +168,14 @@ except ValueError:
     print("Invalid batch size. Using default 5")
     gen_batch_size = 5
 
+# Max threads for async operations
+max_workers = os.getenv("MAX_THREADS", "10")
+try:
+    max_workers = int(max_workers)
+except ValueError:
+    print("Invalid MAX_THREADS. Using default 10")
+    max_workers = 10
+
 # Async generation flag
 async_gen = get_env_or_prompt(
     "ASYNC_GEN",
@@ -322,7 +330,7 @@ def generate_answers(messages, model_to_use, logits=False):
 # --- Async support functions ---
 
 async def generate_prompts_async(topic, amount, batch_size, prompt_instructions=""):
-    pool = concurrent.futures.ThreadPoolExecutor()
+    pool = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
     batches = (amount + batch_size - 1) // batch_size
     tasks = []
     remaining = amount
@@ -339,7 +347,7 @@ async def generate_prompts_async(topic, amount, batch_size, prompt_instructions=
     return await asyncio.gather(*tasks)
 
 async def generate_answers_async(messages_list, models_list, logits):
-    pool = concurrent.futures.ThreadPoolExecutor()
+    pool = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
     tasks = []
 
     for msg, model in zip(messages_list, models_list):
