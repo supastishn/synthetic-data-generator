@@ -229,13 +229,18 @@ def generate_prompts(topic="Any", amount=1, prompt_instructions="", prior_prompt
     user_message = f"""
     Generate exactly {amount} BRAND NEW prompts for: '{topic}'.{diff_instruction}
     
+    CRITICAL REQUIREMENTS:
+    - ALWAYS produce DIFFERENT prompts from prior ones
+    - Avoid repeating core concepts across prompts for the same topic
+    - Ensure EVERY prompt has a UNIQUE approach and perspective
+    
     Each prompt must be UNIQUE and DISTINCT from all others.{prior_context}"""
-
+    
     # Add the instructions block if provided
     if prompt_instructions:
         user_message += f"""
 
-    Additional Instructions:
+    Additional Instructions (MUST ADHERE TO THESE):
     {prompt_instructions}"""
 
     user_message += """
