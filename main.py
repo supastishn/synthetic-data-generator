@@ -218,6 +218,7 @@ try:
 except ValueError:
     print("Invalid MAX_THREADS. Using default 10")
     max_workers = 10
+print(f"Using max_workers={max_workers} for thread pools in async operations")
 
 # Async generation flag
 async_gen = get_env_or_prompt(
@@ -530,6 +531,7 @@ random.shuffle(assigned_models)
 
 # Answer generation (sync or async)
 if async_gen:
+    print(f"Preparing async answer generation with max_workers={max_workers}")
     async def gather_answers():
         messages_list = []
         for idx, conv in enumerate(conversations):
