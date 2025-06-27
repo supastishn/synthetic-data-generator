@@ -17,18 +17,34 @@ def unescape_newlines(s):
         return s
     return s.replace('\\n', '\n').replace('\\t', '\t')
 
-def log_request(model, messages, **kwargs):
-    print(f"\n[VERBOSE] REQUEST to {model}:")
-    print(f"Messages: {json.dumps(messages, indent=2)}")
+def log_request(model, messages, purpose=None, **kwargs):
+    purpose_str = f" ({purpose})" if purpose else ""
+    print(f"\n[VERBOSE] REQUEST to {model}{purpose_str}:")
+    # Print each message in the request with formatted content
+    for i, msg in enumerate(messages):
+        role = msg['role']
+        content = msg['content']
+        truncated = content[:400] + '...' if len(content) > 400 else content
+        print(f"Message {i+1} - {role.upper()}: {truncated}")
     if kwargs:
         print(f"Options: {json.dumps(kwargs, indent=2)}")
 
-def log_response(response, model):
+def log_response(response, model, messages):
+    # Extract the latest response
     content = response.choices[0].message.content
     logprobs = bool(getattr(response.choices[0].message, 'logprobs', None))
-    
+    truncated_content = content[:400] + '...' if len(content) > 400 else content
+
+    # Print the entire conversation context first
     print(f"\n[VERBOSE] RESPONSE from {model}:")
-    print(f"Content: {content[:400]}{'...' if len(content) > 400 else ''}")
+    for i, msg in enumerate(messages):
+        role = msg['role']
+        content = msg['content']
+        truncated = content[:400] + '...' if len(content) > 400 else content
+        print(f"Message {i+1} - {role.upper()}: {truncated}")
+    
+    # Then print the new assistant message
+    print(f"New assistant message: {truncated_content}")
     if logprobs:
         print(f"Logprobs: captured ({len(response.choices[0].logprobs.content)} tokens)")
 
@@ -267,10 +283,11 @@ def generate_prompts(topic="Any", amount=1, prompt_instructions="", prior_prompt
     while True:
         try:
             if verbose_logging:
-                log_request(promptgen_model, [
+                request_messages = [
                     {"content": "You output only in XML format. Use <prompt>, <system>, and <user> tags. Do not include any explanations or additional text.", "role": "system"},
                     {"content": user_message, "role": "user"}
-                ], temperature=1.0)
+                ]
+                log_request(promptgen_model, request_messages, purpose="promptgen", temperature=1.0)
 
             response = completion(
                 model=promptgen_model,
@@ -285,7 +302,8 @@ def generate_prompts(topic="Any", amount=1, prompt_instructions="", prior_prompt
             )
 
             if verbose_logging:
-                log_response(response, promptgen_model)
+                # Pass the entire request context to the response logger
+                log_response(response, promptgen_model, request_messages)
             break  # Exit loop on success
         except Exception as e:
             if attempt < max_retries and is_retryable_exception(e):
@@ -347,7 +365,7 @@ def generate_answers(messages, model_to_use, logits=False):
     while True:
         try:
             if verbose_logging:
-                log_request(model_to_use, messages, temperature=temp, **response_options)
+                log_request(model_to_use, messages, purpose="answergen", temperature=temp, **response_options)
 
             response = completion(
                 model=model_to_use,
@@ -357,7 +375,8 @@ def generate_answers(messages, model_to_use, logits=False):
             )
 
             if verbose_logging:
-                log_response(response, model_to_use)
+                # Pass the entire conversation context to the response logger
+                log_response(response, model_to_use, messages)
             break  # Exit loop on success
         except Exception as e:
             if attempt < max_retries and is_retryable_exception(e):
