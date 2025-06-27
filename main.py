@@ -232,6 +232,13 @@ if len(amounts) == 1:
 def generate_prompts(topic="Any", amount=1, prompt_instructions="", prior_prompts=[]):
     if verbose_logging:
         print(f"\n{'='*40}\nGenerating {amount} prompts for: {topic}\n{'='*40}")
+        if prior_prompts:
+            print(f"Using {len(prior_prompts)} prior prompt(s) for '{topic}' as context to avoid duplication:")
+            for i, p in enumerate(prior_prompts):
+                truncated = p[:200] + '...' if len(p) > 200 else p
+                print(f"  {i+1}. {truncated}")
+        else:
+            print(f"No prior prompts for '{topic}' - generating new prompts")
 
     # Only show prior USER prompts in context (skip system prompts)
     user_prior_context = ""
