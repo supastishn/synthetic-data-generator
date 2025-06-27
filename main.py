@@ -462,60 +462,90 @@ async def generate_answers_async(messages_list, models_list, logits):
 
     return await asyncio.gather(*tasks)
 
-conversations = existing_conversations[:]  # Start with existing conversations
-new_conversations_indices = list(range(len(conversations), len(conversations) + sum(amounts)))
+# Precompute existing user prompts per topic from existing conversations
+topic_prior_prompts = {}
+for conv in existing_conversations:
+    topic = conv.get("topic")
+    if topic is None:
+        continue
+    # Initialize the list for the topic if not present
+    if topic not in topic_prior_prompts:
+        topic_prior_prompts[topic] = []
+    for msg in conv["messages"]:
+        if msg['role'] == 'user':
+            topic_prior_prompts[topic].append(msg['content'])
+            break
 
-# Always use sequential prompt generation (even in async_gen mode) 
-# to ensure prior prompts are tracked during generation
-
-for topic_index, current_topic in enumerate(topics):
-    amount_for_topic = amounts[topic_index]
-    
-    # Collect existing user prompts for this topic from current conversations
-    existing_prompts = []
-    for conv in conversations:
-        if conv.get("topic") == current_topic:
-            for msg in conv["messages"]:
-                if msg["role"] == "user":
-                    existing_prompts.append(msg["content"])
-                    break
-    
-    # Calculate batches
+# Function to generate topic prompts sequentially (batches depend on prior topic prompts)
+def generate_topic_prompts(current_topic, amount, prior_prompts):
     batches = []
-    remaining = amount_for_topic
+    remaining = amount
     while remaining > 0:
         batch_amount = min(remaining, gen_batch_size)
         batches.append(batch_amount)
         remaining -= batch_amount
-    
-    # Generate in batches - updating existing_prompts after each batch
+
+    new_convs = []
     for batch_amount in batches:
-        # Update instructions to include topic info if needed
-        adjusted_instructions = prompt_instructions
-        if existing_prompts:
-            topic_num = topic_index + 1
-            total_topics = len(topics)
-            adjusted_instructions += f"\nThis is topic {topic_num} of {total_topics} - ensure variety across topics"
-        
         prompt_groups = generate_prompts(
             current_topic,
             batch_amount,
-            adjusted_instructions,
-            existing_prompts
+            prompt_instructions,
+            prior_prompts
         )
-        
-        # Append new conversations and collect their user prompts
         for group in prompt_groups:
             conv_obj = {
                 "topic": current_topic,
                 "messages": group
             }
-            conversations.append(conv_obj)
-            # Find the user prompt and add to existing_prompts for following batches
+            new_convs.append(conv_obj)
+            # Update prior_prompts with new user prompts for this topic
             for msg in group:
                 if msg["role"] == "user":
-                    existing_prompts.append(msg["content"])
+                    prior_prompts.append(msg["content"])
                     break
+    return new_convs
+
+conversations = existing_conversations[:]  # Start with existing conversations
+new_conversations_indices = list(range(len(conversations), len(conversations) + sum(amounts)))
+
+# Generate prompts either async (per topic) or sequentially
+if async_gen:
+    print(f"Starting async prompt generation with max_workers={max_workers}")
+    async def gather_prompts():
+        # Use a separate thread pool
+        pool = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
+        tasks = []
+
+        # Prepare tasks per topic
+        for topic_index, current_topic in enumerate(topics):
+            amount_for_topic = amounts[topic_index]
+            prior_prompts = topic_prior_prompts.get(current_topic, [])
+
+            tasks.append(
+                asyncio.get_event_loop().run_in_executor(
+                    pool, 
+                    generate_topic_prompts,
+                    current_topic,
+                    amount_for_topic,
+                    prior_prompts
+                )
+            )
+
+        # Wait for all topics to complete
+        results = await asyncio.gather(*tasks)
+        for topic_convs in results:
+            conversations.extend(topic_convs)
+    
+    asyncio.get_event_loop().run_until_complete(gather_prompts())
+else:
+    # Sequential prompt generation
+    for topic_index, current_topic in enumerate(topics):
+        amount_for_topic = amounts[topic_index]
+        prior_prompts = topic_prior_prompts.get(current_topic, [])
+        conversations.extend(
+            generate_topic_prompts(current_topic, amount_for_topic, prior_prompts)
+        )
 
 # Assign answer models to conversations according to splits
 assigned_models = []
