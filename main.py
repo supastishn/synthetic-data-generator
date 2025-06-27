@@ -213,12 +213,23 @@ async_gen = get_env_or_prompt(
 if len(amounts) == 1:
     amounts = [amounts[0]] * len(topics)
 
-def generate_prompts(topic = "Any", amount = 1, prompt_instructions=""):
+def generate_prompts(topic="Any", amount=1, prompt_instructions="", prior_prompts=[]):
     if verbose_logging:
         print(f"\n{'='*40}\nGenerating {amount} prompts for: {topic}\n{'='*40}")
 
+    # Include prior prompts in context
+    prior_context = ""
+    if prior_prompts:
+        prior_list = "\n".join([f"{i+1}. {p}" for i, p in enumerate(prior_prompts)])
+        prior_context = f"\n\nPrior prompts for '{topic}':\n{prior_list}\n\n"
+        diff_instruction = f" Make sure all new prompts are substantially different from these prior examples."
+    else:
+        diff_instruction = ""
+
     user_message = f"""
-    Generate exactly {amount} prompts for '{topic}'."""
+    Generate exactly {amount} BRAND NEW prompts for: '{topic}'.{diff_instruction}
+    
+    Each prompt must be UNIQUE and DISTINCT from all others.{prior_context}"""
 
     # Add the instructions block if provided
     if prompt_instructions:
@@ -434,26 +445,61 @@ if async_gen:
             for group in batch:
                 if len(conversations) not in new_conversations_indices:
                     continue  # Skip non-new indices
-                conversations.append({"messages": group})
+                # Add topic to conversation object
+                conversations.append({
+                    "topic": current_topic,
+                    "messages": group
+                })
 else:
-    # Sync prompt generation (now batched like async mode)
+    # Sync prompt generation
     for topic_index, current_topic in enumerate(topics):
         amount_for_topic = amounts[topic_index]
         
-        # Calculate batches for sync mode
+        # Collect existing user prompts for this topic
+        existing_prompts = []
+        for conv in conversations:
+            if conv.get("topic") == current_topic:
+                for msg in conv["messages"]:
+                    if msg["role"] == "user":
+                        existing_prompts.append(msg["content"])
+                        break
+        
+        # Calculate batches
         batches = []
         remaining = amount_for_topic
         while remaining > 0:
             batch_amount = min(remaining, gen_batch_size)
             batches.append(batch_amount)
             remaining -= batch_amount
-            
+        
+        # Generate in batches with attention to prior prompts
         for batch_amount in batches:
-            prompt_groups = generate_prompts(current_topic, batch_amount, prompt_instructions)
+            # Update instructions with topic numbering
+            adjusted_instructions = prompt_instructions
+            if existing_prompts:
+                topic_num = topic_index + 1
+                total_topics = len(topics)
+                adjusted_instructions += f"\nThis is topic {topic_num} of {total_topics} - ensure variety across topics"
+            
+            prompt_groups = generate_prompts(
+                current_topic,
+                batch_amount,
+                adjusted_instructions,
+                existing_prompts
+            )
+            
             for group in prompt_groups:
-                if len(conversations) not in new_conversations_indices:
-                    continue  # Skip non-new indices
-                conversations.append({"messages": group})
+                # Add new conversation with topic
+                conv_obj = {
+                    "topic": current_topic,
+                    "messages": group
+                }
+                conversations.append(conv_obj)
+                # Add to existing_prompts for next batches
+                for msg in group:
+                    if msg["role"] == "user":
+                        existing_prompts.append(msg["content"])
+                        break
 
 # Assign answer models to conversations according to splits
 assigned_models = []
