@@ -377,14 +377,24 @@ if async_gen:
                     continue  # Skip non-new indices
                 conversations.append({"messages": group})
 else:
-    # Sync prompt generation (original code)
+    # Sync prompt generation (now batched like async mode)
     for topic_index, current_topic in enumerate(topics):
         amount_for_topic = amounts[topic_index]
-        prompt_groups = generate_prompts(current_topic, amount_for_topic, prompt_instructions)
-        for group in prompt_groups:
-            if len(conversations) not in new_conversations_indices:
-                continue  # Skip non-new indices
-            conversations.append({"messages": group})
+        
+        # Calculate batches for sync mode
+        batches = []
+        remaining = amount_for_topic
+        while remaining > 0:
+            batch_amount = min(remaining, gen_batch_size)
+            batches.append(batch_amount)
+            remaining -= batch_amount
+            
+        for batch_amount in batches:
+            prompt_groups = generate_prompts(current_topic, batch_amount, prompt_instructions)
+            for group in prompt_groups:
+                if len(conversations) not in new_conversations_indices:
+                    continue  # Skip non-new indices
+                conversations.append({"messages": group})
 
 # Assign answer models to conversations according to splits
 assigned_models = []
