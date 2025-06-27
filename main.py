@@ -270,7 +270,7 @@ def generate_prompts(topic="Any", amount=1, prompt_instructions="", prior_prompt
                 log_request(promptgen_model, [
                     {"content": "You output only in XML format. Use <prompt>, <system>, and <user> tags. Do not include any explanations or additional text.", "role": "system"},
                     {"content": user_message, "role": "user"}
-                ], temperature=0.7)
+                ], temperature=1.0)
 
             response = completion(
                 model=promptgen_model,
@@ -281,7 +281,7 @@ def generate_prompts(topic="Any", amount=1, prompt_instructions="", prior_prompt
                     },
                     {"content": user_message, "role": "user"}
                 ],
-                temperature=0.7,
+                temperature=1.0,
             )
 
             if verbose_logging:
