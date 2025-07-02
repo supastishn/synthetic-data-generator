@@ -2,7 +2,7 @@
 # Ignore environment files
 
 # Ignore JSON data files
-*.json
+
 
 # Ignore Python cache and build files
 __pycache__/
@@ -17,3 +17,4 @@ build/
 *.swp
 *.swo
 *:~
+.env
