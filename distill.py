@@ -7,10 +7,11 @@ from torch.utils.data import Dataset, DataLoader
 import os
 import json
 from tqdm import tqdm
-from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, TrainingArguments, Trainer
+from transformers import AutoTokenizer, BitsAndBytesConfig, TrainingArguments, Trainer
 from transformers import DataCollatorWithPadding
 import torch.nn.functional as F
-from peft import LoraConfig, get_peft_model  # Add this import
+from unsloth import FastLanguageModel
+from peft import LoraConfig
 
 class DistillationDataset(Dataset):
     def __init__(self, file_path, tokenizer, max_length=2048):
@@ -203,14 +204,16 @@ tokenizer = AutoTokenizer.from_pretrained(model_name)
 tokenizer.pad_token = tokenizer.eos_token
 tokenizer.padding_side = "right"
 
-model = AutoModelForCausalLM.from_pretrained(
-    model_name,
+model, _ = FastLanguageModel.from_pretrained(
+    model_name=model_name,
+    max_seq_length=2048,
+    dtype=torch.float16,
+    load_in_4bit=True,
     quantization_config=bnb_config,
-    device_map="auto"
 )
 
 # Add target modules configuration
-target_modules_str = os.getenv("TARGET_MODULES", "q_proj,v_proj")
+target_modules_str = os.getenv("TARGET_MODULES", "q_proj,k_proj,v_proj,o_proj,gate_proj,up_proj,down_proj")
 target_modules = [m.strip() for m in target_modules_str.split(",")]
 print(f"Using LoRA target modules: {target_modules}")
 

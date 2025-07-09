@@ -22,8 +22,16 @@ model, tokenizer = FastLanguageModel.from_pretrained(
 
 tokenizer.pad_token = tokenizer.eos_token
 
+# Apply Qwen-2.5 chat template
+from unsloth.chat_templates import get_chat_template
+tokenizer = get_chat_template(
+    tokenizer,
+    chat_template="qwen",  # Use Qwen's chat template
+    map_eos_token=True,    # Map the chat template's EOS token to tokenizer.eos_token
+)
+
 # Add before model.get_peft_model
-target_modules_str = os.getenv("TARGET_MODULES", "q_proj,v_proj")
+target_modules_str = os.getenv("TARGET_MODULES", "q_proj,k_proj,v_proj,o_proj,gate_proj,up_proj,down_proj")
 target_modules = [m.strip() for m in target_modules_str.split(",")]
 print(f"Using LoRA target modules: {target_modules}")
 
