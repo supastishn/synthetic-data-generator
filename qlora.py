@@ -1,50 +1,52 @@
 #!/usr/bin/env python3
 
 import os
-import pandas as pd
-import torch
-import torch.nn as nn
-import json
-import transformers
-from datasets import load_dataset, Dataset
+from datasets import load_dataset
 from unsloth import FastLanguageModel
 from trl import SFTTrainer
-from transformers import TrainingArguments
+from transformers import TrainingArguments, DataCollatorForSeq2Seq
+from unsloth.chat_templates import get_chat_template, standardize_sharegpt, train_on_responses_only
 
-model_name = "meta-llama/Llama-2-7b-hf"
+# Load environment variables
+model_name = os.getenv("MODEL_NAME", "unsloth/Qwen2.5-Coder-1.5B-Instruct")
+max_seq_length = int(os.getenv("MAX_SEQ_LENGTH", "2048"))  # Can be any value, we auto support RoPE Scaling
+dtype = None  # None for auto detection. Float16 for Tesla T4, V100, Bfloat16 for Ampere+
+load_in_4bit = os.getenv("LOAD_IN_4BIT", "True") == "True"  # Use 4bit quantization to reduce memory usage. Can be False.
 
+# Load model and tokenizer
 model, tokenizer = FastLanguageModel.from_pretrained(
     model_name=model_name,
-    max_seq_length=2048,  # Adjust as needed
-    dtype=torch.float16,  # Or torch.bfloat16
-    load_in_4bit=True,
+    max_seq_length=max_seq_length,
+    dtype=dtype,
+    load_in_4bit=load_in_4bit,
 )
 
 tokenizer.pad_token = tokenizer.eos_token
+tokenizer.padding_side = "right"  # Ensure padding on the right
 
-# Apply Qwen-2.5 chat template
-from unsloth.chat_templates import get_chat_template
+# Apply Qwen 2.5 chat template
 tokenizer = get_chat_template(
     tokenizer,
-    chat_template="qwen",  # Use Qwen's chat template
-    map_eos_token=True,    # Map the chat template's EOS token to tokenizer.eos_token
+    chat_template="qwen-2.5",
+    map_eos_token=True,
 )
 
-# Add before model.get_peft_model
+# Configure LoRA
+r = int(os.getenv("LORA_R", "16"))
 target_modules_str = os.getenv("TARGET_MODULES", "q_proj,k_proj,v_proj,o_proj,gate_proj,up_proj,down_proj")
 target_modules = [m.strip() for m in target_modules_str.split(",")]
 print(f"Using LoRA target modules: {target_modules}")
 
 model = FastLanguageModel.get_peft_model(
     model,
-    r=16,
-    target_modules=target_modules,  # Updated
-    lora_alpha=32,
-    lora_dropout=0.05,
+    r=r,
+    target_modules=target_modules,
+    lora_alpha=r*2,  # Rule of thumb: 2x Lora r
+    lora_dropout=0,
     bias="none",
-    use_gradient_checkpointing=True,  # Optional: for longer sequences
+    use_gradient_checkpointing="unsloth",  # Use optimized method
     random_state=3407,
-    max_seq_length=2048,
+    max_seq_length=max_seq_length,
 )
 
 def formatting_prompts_func(examples):
