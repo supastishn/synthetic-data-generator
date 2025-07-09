@@ -11,7 +11,6 @@ from transformers import AutoTokenizer, BitsAndBytesConfig, TrainingArguments, T
 from transformers import DataCollatorWithPadding
 import torch.nn.functional as F
 from unsloth import FastLanguageModel
-from peft import LoraConfig
 
 class DistillationDataset(Dataset):
     def __init__(self, file_path, tokenizer, max_length=2048):
@@ -217,15 +216,17 @@ target_modules_str = os.getenv("TARGET_MODULES", "q_proj,k_proj,v_proj,o_proj,ga
 target_modules = [m.strip() for m in target_modules_str.split(",")]
 print(f"Using LoRA target modules: {target_modules}")
 
-peft_config = LoraConfig(
+model = FastLanguageModel.get_peft_model(
+    model,
     r=16,
-    lora_alpha=32,
     target_modules=target_modules,
+    lora_alpha=32,
     lora_dropout=0.05,
     bias="none",
-    task_type="CAUSAL_LM"
+    use_gradient_checkpointing=True,  # Optional: for longer sequences
+    random_state=3407,
+    max_seq_length=2048,
 )
-model = get_peft_model(model, peft_config)
 model.print_trainable_parameters()
 
 # Dataset and dataloader
