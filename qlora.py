@@ -47,75 +47,60 @@ model = FastLanguageModel.get_peft_model(
     max_seq_length=2048,
 )
 
-def convert_conversation_to_pair(messages):
-    """Convert conversation messages to system/human/assistant with optional system"""
-    system = ""
-    human = ""
-    assistant = ""
-    for msg in messages:
-        if msg["role"] == "system":
-            system = msg["content"]
-        elif msg["role"] == "user":
-            human = msg["content"]
-        elif msg["role"] == "assistant":
-            assistant = msg["content"]
-    return system, human, assistant
+def formatting_prompts_func(examples):
+    convos = examples["messages"]
+    texts = [tokenizer.apply_chat_template(convo, tokenize=False, add_generation_prompt=False) for convo in convos]
+    return {"text" : texts}
 
-# Generate prompts for the dataset  
-def generate_prompt(data_point):
-    parts = []
-    if data_point['system']:
-        parts.append(f"<System>: {data_point['system']}")
-    parts.append(f"<Human>: {data_point['human']}")
-    parts.append(f"<AI>: {data_point['assistant']}")
-    text = "\n".join(parts)
-    return {"text": text.strip()}
+data_file = os.getenv("DATA_FILE", "conversations.json")
+dataset = load_dataset("json", data_files=data_file, split="train")
 
-# Load local conversations.json file
-with open('conversations.json', 'r') as f:
-    conversations_data = json.load(f)
+# Standardize to role/content format
+dataset = standardize_sharegpt(dataset)
+dataset = dataset.map(formatting_prompts_func, batched=True)
 
-# Create pairs from conversations
-data_pairs = []
-for conversation in conversations_data:
-    system_msg, human_msg, assistant_msg = convert_conversation_to_pair(conversation["messages"])
-    if human_msg and assistant_msg:  # Only include valid pairs
-        data_pairs.append({"system": system_msg, "human": human_msg, "assistant": assistant_msg})
-
-# Create dataset from the pairs
-dataset = Dataset.from_list(data_pairs).map(generate_prompt)
-
-# Add SFTTrainer setup and training
+# Set up trainer
+batch_size = int(os.getenv("BATCH_SIZE", 1))
+grad_acc_steps = int(os.getenv("GRAD_ACC_STEPS", 4))
+learning_rate = float(os.getenv("LEARNING_RATE", 2e-4))
+training_args = TrainingArguments(
+    per_device_train_batch_size=batch_size,
+    gradient_accumulation_steps=grad_acc_steps,
+    warmup_steps=5,
+    max_steps=30,  # Can set to None for full epoch training
+    learning_rate=learning_rate,
+    logging_steps=1,
+    optim="paged_adamw_8bit",  # Save more memory
+    weight_decay=0.01,
+    lr_scheduler_type="linear",
+    seed=3407,
+    output_dir="outputs",
+    report_to="none",
+    fp16=not torch.cuda.is_bf16_supported(),
+    bf16=torch.cuda.is_bf16_supported(),
+)
 
 trainer = SFTTrainer(
     model=model,
     tokenizer=tokenizer,
     train_dataset=dataset,
-    dataset_text_field="text",  # Key for our generated prompts
-    max_seq_length=2048,
-    args=TrainingArguments(
-        per_device_train_batch_size=2,            # Adjust based on GPU RAM
-        gradient_accumulation_steps=4,             # 2x4=8 effective batch size
-        learning_rate=2e-5,
-        optim="paged_adamw_8bit",                 # For memory efficiency
-        logging_steps=10,
-        num_train_epochs=1,                       # Training epochs
-        output_dir="unsloth_output",               # Save directory
-        fp16=not torch.cuda.is_bf16_supported(),   # Precision settings
-        bf16=torch.cuda.is_bf16_supported(),
-        weight_decay=0.01,
-        warmup_ratio=0.03,
-        lr_scheduler_type="cosine",
-        seed=3407,
-        save_strategy="epoch",
-        evaluation_strategy="no"                   # No eval dataset
-    ),
-    packing=True                                   # Better sequence packing
+    dataset_text_field="text",
+    max_seq_length=max_seq_length,
+    data_collator=DataCollatorForSeq2Seq(tokenizer=tokenizer),
+    args=training_args,
+    packing=False,  # Recommended for Qwen training
+)
+
+# Apply response-only masking for assistant responses
+trainer = train_on_responses_only(
+    trainer,
+    instruction_part="<|im_start|>user\n",
+    response_part="<|im_start|>assistant\n",
 )
 
 # Start training
 trainer.train()
 
-# Save final model (add at end)
-model.save_pretrained("unsloth_final_model")
+# Save final model
+model.save_pretrained_merged("unsloth_final_model", tokenizer, save_method="merged_4bit")
 print("Model saved successfully!")
