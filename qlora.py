@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import torch
 import os
 from datasets import load_dataset
 from unsloth import FastLanguageModel
