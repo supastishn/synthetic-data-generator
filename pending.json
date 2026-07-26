@@ -1,0 +1,402 @@
+[
+  {
+    "id": "1",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement the Sieve of Eratosthenes: Given an integer N, create a boolean list `is_prime` of size N+1 initialized to True. Set indices 0 and 1 to False. For i from 2 to sqrt(N) (inclusive), if `is_prime[i]` is True, then for j from i*i to N step i, set `is_prime[j] = False`. Return a list of all primes (i where is_prime[i] is True).",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "2",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement binary search to find the first occurrence of a target in a sorted array `arr`. Initialize `lo=0, hi=len(arr)-1, ans=-1`. While `lo <= hi`, set `mid = (lo+hi)//2`. If `arr[mid] >= target`, set `ans = mid` if `arr[mid]==target`, then set `hi = mid-1`. Else (`arr[mid] < target`), set `lo = mid+1`. After loop, return `ans`.",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "3",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement modular exponentiation: compute `(base^exp) % mod` efficiently. Set `result=1, base=base%mod`. While `exp > 0`: if `exp` is odd, `result = (result*base) % mod`. Then `base = (base*base) % mod`, `exp //= 2`. Return `result`.",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "4",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement the Euclidean algorithm for GCD: define a function `gcd(a, b)`. While `b != 0`, set `a, b = b, a % b`. Return `a`.",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "5",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement a function to count the number of divisors of an integer `n`. Initialize `cnt = 0`. Loop `i` from 1 to `int(sqrt(n))` inclusive. If `n % i == 0`: if `i == n // i` increment `cnt` by 1, else increment `cnt` by 2. Return `cnt`.",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "6",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement a palindrome check for a string `s`. Use two pointers: `left = 0`, `right = len(s) - 1`. While `left < right`: if `s[left] != s[right]`, return `False`. Increment `left`, decrement `right`. Return `True` if loop completes.",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "7",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement merge of two sorted lists `a` and `b` into one sorted list. Initialize indices `i=j=0`, empty list `result`. While `i < len(a)` and `j < len(b)`: if `a[i] <= b[j]` append `a[i]` and `i+=1`; else append `b[j]` and `j+=1`. After the loop, append any remaining elements from `a` (i to end) and `b` (j to end). Return `result`.",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "8",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement bubble sort on an array `arr`. Loop `i` from `len(arr)-1` down to 1. Inside, loop `j` from 0 to `i-1`. If `arr[j] > arr[j+1]`, swap them. Return the sorted array.",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "9",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement factorial modulo `mod`: given `n` and `mod`, compute `n! % mod`. Initialize `res=1`. For `i` from 2 to `n` inclusive, do `res = (res * i) % mod`. Return `res`.",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "10",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement Fibonacci using matrix exponentiation. The Fibonacci numbers are defined as F(0)=0, F(1)=1. Use matrix [[1,1],[1,0]] raised to power n using fast exponentiation on 2x2 matrices. Matrix multiplication: given A and B, compute C where C[0][0] = (A[0][0]*B[0][0] + A[0][1]*B[1][0]) % MOD, etc. Power function: if n==0 return identity. Then while n>0, if odd multiply result by matrix, multiply matrix by itself, n//=2. The result for F(n) is the top-right element (index [0][1]) of the resulting matrix after raising to power n. Return that value modulo MOD=10**9+7.",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "11",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Build a prefix sum array from input array `arr` of length n. Initialize `pref` of size n. Set `pref[0] = arr[0]`. For i from 1 to n-1: `pref[i] = pref[i-1] + arr[i]`. Return `pref`.",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "12",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement a segment tree for range sum queries and point updates. Create a class with methods `__init__(self, arr)`, `build(node, start, end)`, `update(node, start, end, idx, val)`, `query(node, start, end, l, r)`. Tree size 4*n. Build: if start==end set tree[node]=arr[start]; else mid, build left and right, tree[node]=left+right. Update: if start==end tree[node]=val; else mid, if idx<=mid update left else update right, recalc tree[node]=left+right. Query: if range completely outside return 0; if l<=start and end<=r return tree[node]; else mid, return query left + query right.",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "13",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement a segment tree with lazy propagation for range add and range sum query. Provide a class with arrays `tree` and `lazy` of size 4*n. Methods: `build(arr)`, `push(node, start, end)` to propagate lazy to children, `update(node, start, end, l, r, val)`, `query(node, start, end, l, r)`. In `update`: if range fully covered, tree[node] += val*(end-start+1), lazy[node] += val. Else, push, recurse on children, then tree[node] = tree[left]+tree[right]. Query similar with push before recursion. Return sum.",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "14",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement a Fenwick tree (Binary Indexed Tree) for point update and range sum query. Array `tree` of size n+1, 1-indexed. Method `add(idx, delta)`: while idx <= n, tree[idx] += delta, idx += idx & -idx. Method `prefix_sum(idx)`: res=0, while idx>0, res+=tree[idx], idx -= idx & -idx. Method `range_sum(l, r)`: return prefix_sum(r) - prefix_sum(l-1).",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "15",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement Disjoint Set Union (DSU) with path compression and union by rank. Initialize `parent[i]=i`, `rank[i]=0` for n elements. `find(x)`: if parent[x]!=x, parent[x]=find(parent[x]); return parent[x]. `union(x, y)`: rx=find(x), ry=find(y); if rx!=ry: if rank[rx] < rank[ry] swap; parent[ry]=rx; if rank[rx]==rank[ry] rank[rx]+=1.",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "16",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement a sparse table for range minimum queries on a static array `arr`. Precompute `st` where `st[i][j]` stores the minimum of the range starting at i of length 2^j. Build: for i, `st[i][0]=arr[i]`. For j from 1 to floor(log2(n)): for i from 0 to n - (1<<j): `st[i][j] = min(st[i][j-1], st[i+(1<<(j-1))][j-1])`. Query(l, r): length = r-l+1, k = floor(log2(length)), return `min(st[l][k], st[r-(1<<k)+1][k])`. Precompute log2 values for speed.",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "17",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement a Trie for lowercase English letters. Node has dict `children` and boolean `is_end`. Methods: `insert(word)`: traverse, creating missing nodes, mark last node `is_end=True`. `search(word)`: traverse, return True if exists and last node `is_end` else False. `starts_with(prefix)`: traverse, return True if possible to follow prefix.",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "18",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement heap sort using Python's heapq. Build a min-heap from the list using `heapify`. Repeatedly `heappop` the smallest element and append to a result list. Return the result list.",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "19",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement a min-priority queue with lazy deletion. Store entries as (value, id) in a min-heap. Maintain a set `deleted` of IDs that have been marked for deletion. `push(value, id)` pushes (value, id). `pop()`: while heap is not empty and top's id is in `deleted`, pop and discard. Then pop the top (value, id) and return value. `delete(id)` adds id to `deleted` set.",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "20",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement BFS to find shortest distances from source `s` in an unweighted graph given as adjacency list `graph` of size n. Initialize `dist = [-1]*n`, queue `deque`. Set `dist[s]=0`, append s. While queue not empty: pop u, for v in graph[u]: if `dist[v]==-1`, `dist[v]=dist[u]+1`, append v. Return dist array.",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "21",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement Kahn's algorithm for topological sort. Given n and edge list, build adjacency list and compute indegrees. Initialize queue with all nodes having indegree 0. While queue: pop u, append u to result, for each neighbor v, decrement indegree[v]; if indegree[v]==0, push v. If length of result != n, there is a cycle, return empty list; else return result.",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "22",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement Dijkstra's shortest path from source `s` on a weighted graph given as adjacency list `graph` where each entry is `(neighbor, weight)`. Initialize `dist` array with inf, `dist[s]=0`. Use min-heap `pq` with `(0, s)`. While pq: pop `(d, u)`. If `d > dist[u]` continue. For each `(v, w)` in `graph[u]`: if `dist[v] > dist[u] + w`: update `dist[v] = dist[u] + w`, push `(dist[v], v)`. Return `dist`.",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "23",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement the Bellman-Ford algorithm for n vertices and a list of edges `(u, v, w)`. Set `dist = [inf]*n`, `dist[src]=0`. For i in range(n-1): for each `(u,v,w)` in edges: if `dist[u] != inf` and `dist[u] + w < dist[v]`, set `dist[v] = dist[u] + w`. Then check for negative cycle: for each edge, if `dist[u] != inf` and `dist[u] + w < dist[v]`, return \"negative cycle\". Else return `dist`.",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "24",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement Floyd-Warshall all-pairs shortest path. Given n and an adjacency matrix `dist` where `dist[i][j]` is weight or inf. For k from 0 to n-1: for i from 0 to n-1: for j from 0 to n-1: if `dist[i][k] + dist[k][j] < dist[i][j]`: update `dist[i][j] = dist[i][k] + dist[k][j]`. Return `dist`.",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "25",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement Kruskal's algorithm for Minimum Spanning Tree. Given n vertices and list of edges `(u, v, weight)`. Sort edges by weight. Use DSU. Initialize total = 0. For each edge `(u, v, w)` in sorted order: if `find(u) != find(v)`, union them, `total += w`. Return total.",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "26",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement Prim's algorithm for MST using adjacency list. Start from node 0. `visited = [False]*n`, min-heap with `(0, 0)`. `total = 0`. While heap: pop `(w, u)`. If visited[u] continue. Mark visited[u]=True, total+=w. For each `(v, weight)` in graph[u]: if not visited[v], push `(weight, v)`. Return total.",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "27",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement Kosaraju's algorithm to find strongly connected components. Step 1: DFS on original graph, push nodes to a stack upon finishing. Step 2: reverse graph. Step 3: initialize visited array; while stack not empty, pop node, if not visited, perform DFS on reversed graph to collect all reachable nodes; that set is an SCC. Return list of SCCs.",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "28",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement Hierholzer's algorithm to find an Eulerian circuit in a directed graph where all vertices have balanced degree (in-degree == out-degree). Choose start vertex (any with outgoing edges). Use stack = [start], circuit = []. While stack: u = stack[-1]; if graph[u] has outgoing edges: v = graph[u].pop(), stack.append(v); else: circuit.append(stack.pop()). After loop, reverse circuit to get correct order. Return circuit.",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "29",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement bipartite graph check using BFS. Given adjacency list, initialize `color = [-1]*n`. For each node i: if color[i]==-1, set color[i]=0, queue=[i]. While queue: pop u; for v in graph[u]: if color[v]==-1, set color[v]=1-color[u], push v; else if color[v]==color[u], return False. Return True if all components are bipartite.",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "30",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement longest increasing subsequence (LIS) in O(n log n) using patience sorting. Given array `a`. Maintain list `tails` empty. For each x in a: binary search for the first index `i` in `tails` such that `tails[i] >= x`. If i equals len(tails), append x; else tails[i]=x. Return length of `tails`.",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "31",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement 0/1 knapsack using 1D DP. Given arrays `weights`, `values` and capacity `C`. Initialize `dp = [0]*(C+1)`. For i from 0 to n-1: iterate `j` from `C` down to `weights[i]`: `dp[j] = max(dp[j], dp[j-weights[i]] + values[i])`. Return `dp[C]`.",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "32",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement coin change (minimum coins) given coin denominations `coins` and `amount`. Initialize `dp = [inf]*(amount+1)`, `dp[0]=0`. For a from 1 to amount: for c in coins: if a-c >=0, `dp[a] = min(dp[a], dp[a-c]+1)`. Return `dp[amount]` if it is not inf, else -1.",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "33",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement edit distance (Levenshtein) between two strings `word1` and `word2`. Create 2D dp array size `(len1+1) x (len2+1)`. Initialize `dp[i][0]=i`, `dp[0][j]=j`. For i from 1..len1, j from 1..len2: if `word1[i-1]==word2[j-1]`, `dp[i][j]=dp[i-1][j-1]`; else `dp[i][j]=1+min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1])`. Return `dp[len1][len2]`.",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "34",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement matrix chain multiplication DP. Given array `p` of dimensions such that matrix A_i has dimensions `p[i-1] x p[i]`, with n matrices (length of p = n+1). dp[i][j] = min cost to multiply matrices i..j. For length l from 2 to n: for i from 1 to n-l+1: j = i+l-1; dp[i][j] = inf; for k from i to j-1: cost = dp[i][k] + dp[k+1][j] + p[i-1]*p[k]*p[j]; if cost < dp[i][j] update. Return dp[1][n].",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "35",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement longest common subsequence (LCS) for strings `s1`, `s2`. dp table size (len1+1)x(len2+1) initialized to 0. For i from 1..len1, j from 1..len2: if `s1[i-1]==s2[j-1]`, `dp[i][j] = dp[i-1][j-1]+1`; else `dp[i][j] = max(dp[i-1][j], dp[i][j-1])`. Return `dp[len1][len2]`.",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "36",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement the Held-Karp dynamic programming solution for Traveling Salesman Problem (TSP) using bitmask. Given n cities and distance matrix `dist`, start at 0. dp[mask][i] = min cost to visit set `mask` ending at city i. Initialize dp[1<<i][i] = dist[0][i] for i>0. For mask from 0 to (1<<n)-1: for i where mask has bit i set: if dp[mask][i] is not inf: for j where bit j not set: new_mask = mask | (1<<j), dp[new_mask][j] = min(dp[new_mask][j], dp[mask][i] + dist[i][j]). Finally answer = min over i of dp[(1<<n)-1][i] + dist[i][0]. Return answer.",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "37",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement nCr modulo MOD using precomputed factorials. Precompute `fact` and `inv_fact` arrays up to MAX N. fact[0]=1; for i=1..N: fact[i]=fact[i-1]*i%MOD. inv_fact[N] = pow(fact[N], MOD-2, MOD). For i from N-1 down to 0: inv_fact[i]=inv_fact[i+1]*(i+1)%MOD. nCr(n,r): if r<0 or r>n return 0; return fact[n]*inv_fact[r]%MOD*inv_fact[n-r]%MOD.",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "38",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement modular inverse using extended Euclidean algorithm. Define `modinv(a, m)` returning x such that (a*x) % m == 1. Use helper `egcd(a,b)`: if b==0 return (a,1,0); g,x1,y1 = egcd(b, a%b); return (g, y1, x1 - (a//b)*y1). Then g,x,y = egcd(a,m). If g!=1, no inverse; else return x % m.",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "39",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement Chinese Remainder Theorem for two congruences: x ≡ a1 (mod m1), x ≡ a2 (mod m2), where m1, m2 coprime. Compute M = m1*m2. Use extended gcd to find p,q such that p*m1 + q*m2 = 1. Then x = (a1*m2*q + a2*m1*p) % M. Return x.",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "40",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement KMP algorithm for pattern searching. Compute prefix function `pi` for pattern: pi[0]=0, j=0. For i from 1 to len(pattern)-1: while j>0 and pattern[i]!=pattern[j], j=pi[j-1]; if pattern[i]==pattern[j], j+=1; pi[i]=j. Then search text: j=0; for i, char in enumerate(text): while j>0 and char!=pattern[j], j=pi[j-1]; if char==pattern[j], j+=1; if j==len(pattern): found match at i-j+1, set j=pi[j-1]. Return list of starting indices.",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "41",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement Z-algorithm. Given string s, compute Z-array where Z[i] = length of longest substring starting at i that matches prefix. Initialize Z[0]=0, l=r=0. For i from 1 to len(s)-1: if i <= r, Z[i] = min(r-i+1, Z[i-l]). while i+Z[i] < len(s) and s[Z[i]] == s[i+Z[i]], Z[i]++. if i+Z[i]-1 > r, l=i, r=i+Z[i]-1. Return Z array.",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "42",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement Rabin-Karp string matching. Compute hash of pattern using base B and modulus M. Compute rolling hash for text substring of length m. For i from 0 to n-m: if hash matches pattern hash, verify by checking characters. To compute next hash: remove leading char multiplied by B^(m-1), multiply by B, add new char, modulo M. Keep precomputed B^m % M. Return all match start indices.",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "43",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement suffix array construction using the doubling method. Given string s, n = len(s). Initialize `sa` = list(range(n)). Sort sa based on s[i]. For k = 1, 2, 4, ... while k < n: assign ranks such that rank[i] is the lexicographic order of suffix starting at i among current sorted positions (using previous sa order). Then for each i in sa, create tuple (rank[i], rank[i+k] if i+k < n else -1). Sort sa based on these tuples. Return the final `sa`.",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "44",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement Manacher's algorithm to find the longest palindromic substring in `s`. Preprocess: T = '^#' + '#'.join(s) + '#$'. Let n = len(T). Array P of length n. C=0, R=0. For i from 1 to n-2: mirror = 2*C - i. If i < R: P[i] = min(R - i, P[mirror]). While T[i + 1 + P[i]] == T[i - 1 - P[i]]: P[i] += 1. If i + P[i] > R: C = i, R = i + P[i]. Find max P and center index. Compute start in original string: (center - max_len) // 2. Return substring s[start: start+max_len].",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "45",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement Graham scan for convex hull. Given list of points (x,y). Find point p0 with smallest y (and smallest x if tie). Sort other points by polar angle with respect to p0 using cross product; if collinear, keep farthest. Initialize hull stack with p0 and first sorted point. For each next point: while len(hull)>=2 and cross(o, p1, p2) <= 0 (where o is second last, p1 last, p2 current), pop. Push current point. Return hull stack.",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "46",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement point-in-polygon test using ray casting. Given polygon as list of vertices in order, and point p. Cast a horizontal ray to +x. Count intersections with polygon edges. For each edge (v_i, v_{i+1}), if ray intersects (excluding when vertex is exactly on ray but handling properly), increment count. Return True if count is odd, else False.",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "47",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement line segment intersection check for segments AB and CD. Compute orientations o1 = orientation(A,B,C), o2 = orientation(A,B,D), o3 = orientation(C,D,A), o4 = orientation(C,D,B). General case: segments intersect if o1 != o2 and o3 != o4. Special case: if any orientation == 0, check if the point lies on the segment (bounding box test). Return True if intersect, else False. Orientation defined as cross product: (B-A) × (C-A).",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "48",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement Pollard's Rho algorithm for integer factorization. Define function f(x, c, n) = (x*x + c) % n. Function `pollard_rho(n)`: if n%2==0 return 2. Choose random x=2, y=2, c=1, d=1. While d==1: x = f(x,c,n); y = f(f(y,c,n),c,n); d = gcd(|x-y|, n); if d==n, retry with different c. Return d as a non-trivial factor. Then `factor(n)` recursively finds all factors. Use Miller-Rabin primality test if needed. (Implement the basic Rho without primality test for simplicity: just return factor if found.)",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "49",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement iterative Fast Fourier Transform (FFT) for polynomial multiplication. Given two lists A, B. Pad to size power of two N. `fft(a, invert)`: n=len(a); bit-reversal reorder. For length=2,4,...,n: wlen = exp(2πi/length) if not invert else exp(-2πi/length). For i from 0 to n-1 step length: w=1; for j in range(length//2): u = a[i+j]; v = a[i+j+length//2]*w; a[i+j] = u+v; a[i+j+length//2] = u-v; w *= wlen. If invert, divide each by n. Multiply pointwise after fft(A) and fft(B), then fft inverse, round to nearest integer. Return result.",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  },
+  {
+    "id": "50",
+    "topic": "instruction-following-coding",
+    "system_prompt": "You are a Python coding assistant. Your task is to implement the algorithm described in the user message exactly as specified. Do not deviate or add extra functionality. Output only the Python code.",
+    "user_prompt": "Implement a sparse segment tree with coordinate compression for offline point updates and range sum queries. Collect all x coordinates from all update and query operations. Sort and unique to create mapping. Build segment tree over compressed array of size m (unique coordinates). Support `update(idx, val)` adding val at compressed index. `query(l, r)` map l and r to compressed indices using binary search (upper bound), then perform segment tree range sum query. Return sums.",
+    "status": "pending",
+    "generation_model": "gpt-4.1"
+  }
+]
